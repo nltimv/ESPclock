@@ -40,7 +40,7 @@ It uses a ESP8266 (Wemos D1 mini) or ESP32 (XIAO ESP32 C3).
 9. And we're done! Hope that you liked my project! If you have any suggestions, let me know!
 
 <h2>📱 WEB UI </h2>
-<img src="https://github.com/telepath9/ESPclock/blob/9306d1c4720c6f6852ac14c1f52d81838a5623ad/pics/espclock2.1.1.png" alt="Alt Text" width="100%" height="100%">
+<img src="https://github.com/telepath9/ESPclock/blob/cfe0d19feb081b761db07137ef6aa60ae7f57545/pics/v2.2.jpg" alt="Alt Text" width="100%" height="100%">
 
 <h2>🤖 CURRENT FEATURES</h2>
 
