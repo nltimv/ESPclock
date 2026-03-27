@@ -55,10 +55,11 @@ It uses a ESP8266 (Wemos D1 mini) or ESP32 (XIAO ESP32 C3).
 - [x] ESPmDNS
 - [x] 12-Hour clock mode
 - [ ] Alarm clock mode with buzzer
-- [ ] Display uptime in webUI
+- [x] Display Uptime in webUI
 - [ ] Adding 1 or 2 buttons to the case
 - [ ] ESPhome or Homeassistant integration
 - [ ] HA support
+- [ ] New display support (will be revealed soon)
 
 <h2>🛒 PART LIST</h2>
 <ul>
