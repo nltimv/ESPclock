@@ -8,20 +8,19 @@
 #include <LittleFS.h>      //to access to filesystem
 #include <TM1637Display.h>
 #include <ESPmDNS.h>
+#include <ArduinoJson.h>
 
 //JSON optimizations
 #define ARDUINOJSON_SLOT_ID_SIZE 1
 #define ARDUINOJSON_STRING_LENGTH_SIZE 1
 #define ARDUINOJSON_USE_DOUBLE 0
 #define ARDUINOJSON_USE_LONG_LONG 0
-#include <ArduinoJson.h>
 
-
-//NON-blocking timer function (delay() is EVIL)
-unsigned long myTimer(unsigned long everywhen){
+//NON-blocking timer function (delay() is EVIL). only accepts milliseconds
+unsigned long myTimer(unsigned long everywhen){ //millis overflow-safe!
 
         static unsigned long t1, diff_time;
-        int ret=0;
+        bool ret=0;
         diff_time= millis() - t1;
           
         if(diff_time >= everywhen){
@@ -31,27 +30,23 @@ unsigned long myTimer(unsigned long everywhen){
         return ret;
 }
 
+//4294967295 ms == 49d 17h 5m #######################
+
 const char* ssid;
 const char* password;
 bool creds_available=false;
 bool connected=false;   //wifi connection state
 
 const char *esp_ssid = "ESPclock32";
+const char *esp_password =  "waltwhite64"; //AP pw must be at least 8 chars, otherwise AP won't be customized 
 
-//AP pw must be at least 8 chars, otherwise AP won't be customized 
-const char *esp_password =  "waltwhite64";
+bool newScan = false; //if true, ESP scans for networks again and overrides the previous networks on net_list
+uint8_t attempts = 0; //connection attempts --> when it's set to 0 again, it means pw is wrong
 
-//when true, ESP scans for networks again and overrides the previous networks on net_list
-bool newScan = false;
-
-//connection attempts --> when it is set to 0 again, it means pw is wrong
-uint8_t attempts = 0;
-
-//creating an Asyncwebserver object
 AsyncWebServer server(80);
 
 //TM1637 DISPLAY SETUP
-#define CLK 9  //previously gpio2
+#define CLK 9  //previously gpio2 ??? why i changed the pins??
 #define DIO 10 //previously gpio3
 
 TM1637Display mydisplay(CLK, DIO);
@@ -60,6 +55,8 @@ bool blink=true;
 bool br_auto=false;
 bool twelve=false;
 uint8_t brightness=7;
+uint8_t ms_ovfl=0;
+
 
 const uint8_t SEG_try[]={
   SEG_D | SEG_E | SEG_F | SEG_G,  //t
@@ -104,11 +101,9 @@ void displayAnim(void){
   }
   return;
 }
-//END TM1637 DISPLAY SETUP
 
 //NTP SETUP
 struct tm timeinfo;
-
 /*
 void printLocalTime(){
     struct tm timeinfo;
@@ -122,10 +117,34 @@ void printLocalTime(){
     //Serial.println(timeinfo.tm_hour); //access to single time vars
 }
 */
-
 const char *ntp_addr;
 int gmt_offset;
 bool start_NtpClient = false;
+
+//ALARM setup
+uint8_t hh, mm; //hour and minutes
+
+//all entries are initialized to 0
+bool days[7] = {0};   //in this case mon=days[0], tue=days[1], wed=days[2], thu=days[3], fri=days[4], sat=days[5], sun=days[6]
+
+/*
+arrays are guaranteed to be contiguous.(there's no gap between elements) 
+while structs are not, so it may be that a struct wastes more memory.
+THEN, ARRAY WINS.
+oppure creare un struttura days con dentro i giorni (less confusing to handle than array)
+struct week{
+  bool mon=0;
+  bool tue=0;
+  bool wed=0;
+  bool thu=0;
+  bool fri=0;
+  bool sat=0;
+  bool sun=0;
+}
+*/
+
+uint8_t snooze;
+//uint8_t ringtone;
 
 
 void wifiScan(){
@@ -269,7 +288,7 @@ void checkConfig(void){
           mydisplay.showNumberDec(attempts, true, 1, 3);
         }
 
-        else if(attempts==6){
+        else if(attempts==4){
           attempts=0;
           creds_available = false;
           //Serial.println(F("Can't connect. Goto webUI"));
@@ -305,23 +324,17 @@ void notFound(AsyncWebServerRequest *request){
     request->send(404, "text/plain", "NOT FOUND");
 }
 
- void start_mdns_service(){
-    //initialize mDNS service
-    esp_err_t err = mdns_init();
-    if (err) {
-        printf("MDNS Init failed: %d\n", err);
-        return;
-    }
+void initMDNS(){
+   MDNS.end();
 
-    //set hostname
-    mdns_hostname_set("espclock");
-    //set default instance
-    mdns_instance_name_set("ESPclock by telepath");
+  if (MDNS.begin("espclock")) {
+    MDNS.addService("http", "tcp", 80);
+  } else {
+    Serial.println("mDNS fail");
+  }
 }
 
 void setup() {
-  //start_mdns_service();
-
 
   Serial.begin(115200);
   
@@ -329,7 +342,6 @@ void setup() {
   mydisplay.setBrightness(7); 
   mydisplay.clear();
 
-  //to format FS
   //LittleFS.format();
 
   //Begin LittleFS can throw Err0
@@ -358,14 +370,7 @@ void setup() {
 
   WiFi.mode(WIFI_AP_STA);   
   WiFi.setAutoReconnect(true);
-  
-  if(!MDNS.begin("espclock")){ //user can access to UI writing "espclock.local"
-    Serial.println("fail setting MDNS");
-    while(1){
-      delay(100);
-    }
-  }
-
+  initMDNS();
   delay(100);
 
   if(WiFi.status() != WL_CONNECTED){
@@ -374,7 +379,6 @@ void setup() {
   
   //---------------------------------------------x
   //PHASE 2: here user choose its ssid and enters pw
-  //---------------------------------------------x
   
   //Serial.println("PHASE 2: Configuring AP");  
   WiFi.softAP(esp_ssid, esp_password, false, 2);     //Starting AP on given credential
@@ -386,7 +390,7 @@ void setup() {
   //Route for root index.html
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){ 
     request->send(LittleFS, "/index.html", "text/html" ); 
-    Serial.println("Connection detected");
+    Serial.println("Device detected");
   });
 
   //this is triggered when entering to the webUI after the clock is set. It checks the status of all of the UI elements and updates it
@@ -400,6 +404,9 @@ void setup() {
     uicheck_json["blink"] = blink;
     uicheck_json["twelve"] = twelve;
     uicheck_json["config"] = (LittleFS.exists("/config.json")) ? 1 : 0;
+    uicheck_json["millis"] = millis();
+    uicheck_json["msovfl"] = ms_ovfl;
+
 
     String uc_str;
     serializeJson(uicheck_json, uc_str);
@@ -415,7 +422,7 @@ void setup() {
     //checks json integrity
     if(!f) {
       //Serial.println("Error opening /network_list.json");
-      request->send(500, "application/json", "{\"error\":\"Failed to open network_list.json\"}");
+      request->send(500, "application/json", "{\"error\":\"Can't open network_list.json\"}");
       f.close();
     }
 
@@ -428,7 +435,6 @@ void setup() {
 
   //---------------------------------------------x
   //client(JS) sends http POST req with wifi credentials (inside the body) to server
-  //---------------------------------------------x
   server.on("/sendcreds", HTTP_POST, [](AsyncWebServerRequest *request) {}, NULL, [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
            
     //deserializes http POST req body (has creds inside) from client
@@ -468,11 +474,11 @@ void setup() {
   //HTTP GET req from client, in order to know if connection attempt was successful
   server.on("/wifi_status", HTTP_GET, [](AsyncWebServerRequest *request) {
           
-    if(attempts == 6){
+    if(attempts == 4){
       creds_available = false;
       //attempts=0;
       Serial.println(password);
-      Serial.println(F("handler says: 7 attempts->WRONG PASSWORD - RESET attempts to 0"));
+      Serial.println(F("handler says: 5 attempts->WRONG PASSWORD - RESET attempts to 0"));
       request->send(200, "application/json", "{\"stat\":\"fail\"}");
     }
 
@@ -490,7 +496,6 @@ void setup() {
       }
     }
   });
-
 
   server.on("/updatetime", HTTP_POST, [](AsyncWebServerRequest *request){}, NULL, [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total){
 
@@ -518,7 +523,6 @@ void setup() {
           //extract light value
           brightness =(uint8_t)atoi(bgt_json["bgt"]);
           mydisplay.setBrightness(brightness); 
-          //Serial.println((uint8_t)atoi(bgt_json["bgt"]));
           request->send(200, "application/json", "{\"status\":\"BGT OK\"}");
   });
 
@@ -528,7 +532,6 @@ void setup() {
             JsonDocument br_auto_json;
             deserializeJson(br_auto_json, data);
             br_auto = br_auto_json["br"];
-
             /*to get single time vars 
             Serial.println("Time variables");
             char timeHour[3];
@@ -568,13 +571,21 @@ void setup() {
             request->send(200, "application/json", "{\"status\":\"updated\"}");
   });
 
-   server.on("/twelve", HTTP_POST, [](AsyncWebServerRequest *request){}, NULL, [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total){
+  server.on("/twelve", HTTP_POST, [](AsyncWebServerRequest *request){}, NULL, [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total){
 
             JsonDocument twelve_json;
             deserializeJson(twelve_json, data);
             twelve = (uint8_t)twelve_json["tw"];  //update blink var
             request->send(200, "application/json", "{\"status\":\"updated\"}");
   });
+
+  server.on("/alarm", HTTP_POST, [](AsyncWebServerRequest *request){}, NULL, [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total){
+  
+  });
+
+  /*
+  server.on("/timer", HTTP_POST, [](AsyncWebServerRequest *request){}, NULL, [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total){
+  });*/
 
   server.on("/config", HTTP_POST, [](AsyncWebServerRequest *request){}, NULL, [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total){
 
@@ -622,6 +633,16 @@ void setup() {
     request->send(200, "application/json", "{\"status\":\"updated\"}");
   });
 
+  server.on("/uptime", HTTP_GET, [](AsyncWebServerRequest *request) {
+
+    String json= "{";
+    json+= "\"ms\":\"" + String(millis()) + "\",";
+    json += "\"msovfl\":\""+ String(ms_ovfl) +"\"";
+    json += "}";
+    request->send(200, "application/json", json); 
+    //request->send(200, "application/json", "{\"ms\":\""+ String(millis()) +"\",\"msovfl\":\""+ String(ms_ovfl) + "\"}"); 
+  });
+
   server.onNotFound(notFound);
 
   //start server
@@ -631,7 +652,10 @@ void setup() {
 
 void loop() {
   
-  
+  if(millis() == 4294967295){
+    ms_ovfl++;  //can lead to a bug because uint8_t max value is 255, but it'll reach this value after 50days*256= 35years of activity
+  }
+
   if(newScan==true){
     wifiScan();
     newScan=false;
@@ -689,14 +713,11 @@ void loop() {
 
                 mydisplay.showNumberDecEx(timeinfo.tm_min, 0b01000000, true, 2, 2);
               }
-
-           
               colon=false;  
           }
 
-          else if(colon==false){
-            //colon is OFF
-            
+          else if(colon==false){  //colon is OFF
+
               if(!twelve){
                 mydisplay.showNumberDecEx(timeinfo.tm_hour, 0, true, 2, 0);
                 mydisplay.showNumberDecEx(timeinfo.tm_min, 0, true, 2, 2);
@@ -730,16 +751,10 @@ void loop() {
     displayAnim();
   }
 
-
   //optimization: instead of using "bool connected", i can only use WL_CONNECTED
   if(connected == false && creds_available == true ){
     
     displayAnim();
-    /* Serial.print("SSID chosen: ");
-    Serial.println(ssid);
-    Serial.print("PW is: ");
-    Serial.println(password); */
-
     WiFi.begin(ssid, password);
     
     while(1){
@@ -753,13 +768,13 @@ void loop() {
     
       //once connected, exit form while(1) with break, and then from first if since "connected==true" now
       else if(WiFi.status() == WL_CONNECTED){
-        //start_mdns_service();
         //configTime(gmt_offset*3600, 3600, ntp_addr);
         connected = true;
+        initMDNS();
         break;
       }
 
-      else if(attempts == 6){
+      else if(attempts == 4){
         attempts=0;  //reset "attempts", so it can try a new connection
         creds_available=false;
         Serial.println("RESET Attempts from LOOP");

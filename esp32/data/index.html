@@ -2,7 +2,7 @@
 <html>
 <head>
 
-<title>ESPclock</title>
+<title>ESPclock by telepath</title>
 
 <meta charset="UTF-8" />
 <!--<meta> tag makes your web page responsive in any browser (laptop, tablet or smartphone)-->
@@ -35,7 +35,7 @@ body{
 .ssid_wrapper {
   display:flex;
   flex-direction:row;
-  margin: 0px 18px 15px 20px;
+  margin: 0px 19px 15px 19px;
 }
 
 .pw_wrapper{
@@ -43,7 +43,7 @@ body{
     flex-direction:row;
     width: 275px;
     height: 41px;
-    margin:0px 20px 36px ;
+    margin:0px 19px 36px ;
     /*background-color: #fff9ee;*/
     border-radius: 6px;
     background-color: #444444;
@@ -59,9 +59,12 @@ body{
     text-align: center;
     border-radius: 8px;
     border-style:none;
+    border-width: 0px;
     color: #ced4da;
+    /*margin: 0px 19px 0px 0px;*/
     background-color: #ae0423;
     user-select: none;
+    padding: 0px 0px 0px 0px;
 }
 
 #connect:hover{
@@ -69,7 +72,7 @@ body{
 }
 
 .butpop{
-    margin:0px 20px 20px ;
+    margin:0px 19px 20px ;
 }
 
 .ntp_form{
@@ -83,7 +86,7 @@ body{
 }
 
 #ntp_id{
-    margin:0px 0px 10px 20px;
+    margin:0px 0px 10px 19px;
     font-size: 15px; 
     padding: 0 0 0 6px; 
     color:#bec1c4;
@@ -95,7 +98,7 @@ body{
 }
 
 #gmt_offset{
-    margin:0px 18px 00px 10px;
+    margin:0px 19px 00px 10px;
     font-size: 15px; 
     padding: 0 0 0 6px ; 
     background-color: #444444; 
@@ -117,7 +120,7 @@ body{
     font-weight: 550;
     border-radius: 8px;
     border-style:none;
-    margin:0px 0px 20px 20px;
+    margin:0px 0px 20px 19px;
 }
 
 /* POPUP message (appears on top) */
@@ -253,16 +256,18 @@ input:checked + .slider:before {
   border-radius: 50%;
 }
 
-.config_div{
+/*
+input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) brightness(0.77);
+}*/
+
+.two_buttons{
     display:flex;
     flex-direction:row;
     margin: 0px 0px 20px 0px;
-}
+}   
 
-#saveconf_id{
-    color:#51A0DB;
-    background-color: #1440616e;
-    border-color: #51A0DB;
+#saveconf_id /*, #setalarm_id*/ {
     border-style:solid; 
     border-width: 1px;
     cursor:pointer;
@@ -275,7 +280,7 @@ input:checked + .slider:before {
     margin:0px 0px 0px 6px;
 }
 
-#deleteconf_id{
+#deleteconf_id /*, #deletealarm_id*/{
     color:#BA1E16;
     background-color: #740c0c45;
     border-color: #BA1E16;
@@ -288,39 +293,82 @@ input:checked + .slider:before {
     height: 40px;
     font-weight: 550;
     border-radius: 8px;
-    margin:0px 0px 0px 20px;
+    margin:0px 0px 0px 19px;
 }
 
 /*
-.pw_wrapper:focus {
-  outline-color: red;
-  outline-style:double;
-}   */
-  /* FIX THIS
-#pw:focus {
-  outline-color: transparent;
-  outline-style: none;
-}   */
+#alarm_co{
+width: 100%;
+}
+
+#timer_coll{
+width: 100%;
+}*/
+
+.collapsible {
+  background-color: #eeeeee00;
+  color: #ced4da;
+  cursor: pointer;
+  padding: 0px 0px 0px 0px;
+  width: 275px;
+  border: none;
+  border-radius: 8px;
+  text-align: left;
+  outline: none;
+  font-size: 18.72px;
+  font-weight: 750;
+}
+
+/*
+.active, .collapsible:hover {
+  background-color: #505050;
+}*/
+
+/* Style the collapsible content. Note: hidden by default */
+.content {
+  display: none;
+  overflow: hidden;
+  background-color: #f1f1f100;
+}
+
+.collapsible:after {
+  content: '\25BC'; /* Unicode character for "plus" sign (+) */
+  font-size: 13px;
+  color: #ced4da;
+  float: right;
+  margin: 4px 19px 0px 0px;
+}
+
+.active:after {
+  content: "\25B2"; /* Unicode character for "minus" sign (-) */
+}
+
+/*
+.days{
+    cursor: pointer;
+    width: 30px;
+    height: 30px;
+    background: #444444;
+    font-size: 18px;
+    color:#ced4da;
+    border-style: none;
+    border-radius: 999px;
+    user-select: none;   
+}*/
 
 </style>
 </head>
-<body>
-
-    <div class="flex_container" >
-    
+<body >
+    <!--style="background: linear-gradient(45deg,#6e2fe3,#ae0423);"-->
+    <div class="flex_container">
         <h2 style="margin: 8px 0px 8px 0px;">ESPclock</h2>
-        <form style="background-color: #1a1a1a; text-align: left;border-style:solid; border-color:#3c3e3f;border-radius: 12px; border-width: 1px;">
+        <form style=" background-color: #1a1a1a; text-align: left;border-style:solid; border-color:#3c3e3f;border-radius: 12px; border-width: 1px;">
             
                 <h3 style="margin: 18px 0px 18px 26px;">WiFi Settings</h3>
                 <p id="tip1" style="font-size:14px; margin: 0px 26px 18px 26px; color:#6e9cd1;"></p>
                 <label style="margin-left: 26px;" for="ssid_list">Available networks</label>
-               
                    <div class="ssid_wrapper">
-                        
-                      <select id="ssid_list" name="ssid" style=" padding-left: 2px; color: #bec1c4;
-                                font-size: 15px; background-color: #444444;  height: 40px; width: 237px;
-                                border-radius: 6px 0px 0px 6px; border-color:transparent;border-style:none; 
-                                ">
+                      <select id="ssid_list" name="ssid" style=" padding-left: 2px; color: #bec1c4;font-size: 15px; background-color: #444444;  height: 40px; width: 237px; border-radius: 6px 0px 0px 6px; border-color:transparent;border-style:none;">
                         </select>
                         <button type="button" id="refresh"  for="ssid_list" style="border-radius: 0px 6px 6px 0px;
                                  border: none;
@@ -329,10 +377,8 @@ input:checked + .slider:before {
                                 <use transform="scale(0.88)" href="#refresh_id" /></svg>
                         </button>
                     </div>
-                
-               
-                <label style="padding-left: 26px; " for="pw"> Password</label><br>
-                
+
+                <label style="padding-left: 26px; " for="pw">Password</label><br>                
                 <!--wrapper for PW field + toggle PW (eye)-->
                 <div class="pw_wrapper">
                     <input type="password" placeholder="Enter password" id="pw" maxlength="32" name="pw" required>
@@ -341,21 +387,20 @@ input:checked + .slider:before {
                     <button type="button" id="toggleopen_id" style=" border: none;
                         cursor: pointer;width:40px; height:40px; background-color: transparent; padding: 0px">
                         <svg style="width:30px; height:37px; margin: 3px 5px 0px 8px; ">
-                        <use  id="useopen" transform="scale(0.78)"  href="#openeye_id"/></svg>
+                        <use id="useopen" transform="scale(0.78)"  href="#openeye_id"/></svg>
                     </button>
                     <br>
                 </div>
                 
                 <div class="butpop">
-                 <div class="popup"  style="position: relative;  display: inline-block; cursor: pointer;">
-                    <button type="submit" id="connect"  value="CONNECT">
+                <div class="popup"  style="position: relative;  display: inline-block; cursor: pointer;">
+                    <button type="submit" id="connect" style=" margin: 0px 0px 0px 0px;">
                          CONNECT
                     </button>
                     <span class="popuptext" style="font-size: 14px; user-select: none;" id="myPopup"></span>
                 </div>
-            </div>
+                </div>
         </form>
-
 
             <!--  ⌚  NTP SERVER FORM ⌚ -->
             <div class="ntp_form" style="background-color:#1a1a1a; text-align: left; margin-top: 6px;border-style:solid; border-color: #3c3e3f;border-radius: 12px; border-width: 1px;">     
@@ -412,24 +457,99 @@ input:checked + .slider:before {
                     </span>
                 </div>
 
-                <div class="othersettings_form" style="background-color:#1a1a1a;text-align: left; margin-top: 6px;border-style:solid; border-color: #3c3e3f;border-radius: 12px; border-width: 1px;">     
-                    <h3 style="margin:18px 10px 18px 26px;">Configuration</h3>
+                <!--
+                <div style="background-color:#1a1a1a;text-align: left; margin-top: 6px;border-style:solid; border-color: #3c3e3f;border-radius: 12px; border-width: 1px;">     
+                    <button type="button" id="alarm_co" class="collapsible" style="padding:18px 10px 18px 26px;">Alarm</button>
+                    <div class="content">
+                        <input id="alarm_time" required type="time" style="font-size:17px;cursor:pointer; padding:0px 5px 0px 5px; color:#bec1c4;background-color: #444444;border-style: none; border-radius:8px; height: 40px; margin:2px 0px 20px 19px; width: 265px;">
+                        <p style="font-size: 17px; margin:0px 0px 18px 26px;">Days</p>
+                        <span style="width: 280px; margin: 0px 19px 18px 21px; user-select: none;">
+                            <button id="mon" value="0" class="days" style="margin: 0px 6px 18px 0px;">M</button>
+                            <button id="tue" value="0" class="days" style="margin: 0px 6px 18px 0px;">T</button>
+                            <button id="wed" value="0" class="days" style="margin: 0px 6px 18px 0px;">W</button>
+                            <button id="thu" value="0" class="days" style="margin: 0px 6px 18px 0px;">T</button>
+                            <button id="fri" value="0" class="days" style="margin: 0px 6px 18px 0px;">W</button>
+                            <button id="sat" value="0" class="days" style="margin: 0px 6px 18px 0px;">S</button>
+                            <button id="sun" value="0" class="days" style="margin: 0px 0px 18px 0px;">S</button>
+                        </span>
 
-                    <p style="font-size: 16px; margin:0px 0px 10px 26px;">(to restore data at reboot)</p>
-                    <div class="config_div">
-                        <button type="submit" id="deleteconf_id" value="0">
-                           DELETE
-                        </button>
-                        <button type="submit" id="saveconf_id" value="1">
-                           SAVE
-                        </button>
+                        <span style="display: flex; align-items: center; justify-content: space-between;">
+                            <p style="font-size: 17px; margin:0px 0px 18px 26px;">Snooze</p> 
+                            <input type="number" pattern="\" id="snooze" name="snoo" style="margin:0px 19px 18px 0px; padding-left: 2px; color: #bec1c4;font-size: 15px; background-color: #444444;  height: 40px; width: 100px; border-radius: 6px; border-color:transparent;border-style:none;">
+                          
+                            
+                            <select id="snooze" name="snoo" style="margin:0px 19px 18px 0px; padding-left: 2px; color: #bec1c4;font-size: 15px; background-color: #444444;  height: 40px; width: 100px; border-radius: 6px; border-color:transparent;border-style:none;">
+                                 <option value="0min">Off</option>
+                                 <option value="5min">5 minutes</option>
+                                 <option value="10min">10 minutes</option>
+                                 <option value="15min">15 minutes</option>
+                            </select>
+                        </span>
 
+                        <span style="display: flex; align-items: center; justify-content: space-between;">
+                            <p style="font-size: 17px; margin:0px 0px 18px 26px;">Ringtone</p>
+                            <select disabled id="ringtones" name="ring" style="margin:0px 19px 18px 0px; padding-left: 2px; color: #bec1c4;font-size: 15px; background-color: #444444;  height: 40px; width: 150px; border-radius: 6px; border-color:transparent;border-style:none;">
+                                 <option value="r1">Song 2</option>
+                                 <option value="r2">Super Mario Bros</option>
+                                 <option value="r3">The Godfather</option>
+                                 <option value="r4">???</option>
+                            </select>
+                        </span>
+                        
+                        <div class="two_buttons">
+                        <button type="submit" id="deletealarm_id" value="0">DELETE</button>
+                        <button type="submit" id="setalarm_id" value="1" style="border-color: #AF63E4; color: #AF63E4; background-color: #ae63e427;">SET ALARM</button>
+                        </div>
                     </div>
+                </div>-->
+                
+                <!--
+                <div style="background-color:#1a1a1a;text-align: left; margin-top: 6px;border-style:solid; border-color: #3c3e3f;border-radius: 12px; border-width: 1px;">     
+                    <button type="button" id="timer_coll" class="collapsible" style="padding:18px 10px 18px 26px;">Timer</button>
+                    <div class="content">
+                        <label style="margin-left: 26px;" for="mm">Minutes</label>
+                        <label style="margin-left:88px;" for="ss">Seconds</label>
+                        <span style="height:40px; background-color:#ffffff00;display: flex; align-items: center; justify-content: space-between; margin:0px 20px 20px 20px;">
+                            <input type="number"class="timer_obj" pattern= "^[0-5]?[0-9]?$" id="mm" min="0" max="59" style=" border-radius: 6px;background-color:#444444;border-color:#444444;color:#bec1c4; border-style:none; margin:0px 0px 0px 0px;width: 120px; height: 40px;" type="number" >
+                            <h3 style="margin: 0px 0px 4px 0px">:</h3>
+                            <input type="number"class="timer_obj" pattern= "^[0-5]?[0-9]?$" id="ss" min="0" max="59" style="border-radius: 6px;background-color:#444444;border-color:#444444;color:#bec1c4; border-style:none; margin:0px 0px 0px 0px;width: 120px; height: 40px;" type="number" >
+                        </span>
+                        <div class="timer_div" style="margin:0px 26px 20px 26px;">
+                            <button type="reset" id="resettimer">RESET</button>
+                            <button type="submit" id="timer" >START TIMER</button>
+                        </div>
+                    </div>
+                </div>-->
 
+                <div class="othersettings_form" style="background-color:#1a1a1a;text-align: left; margin-top: 6px;border-style:solid; border-color: #3c3e3f;border-radius: 12px; border-width: 1px;">     
+                    <button type="button" class="collapsible" style="padding:18px 10px 18px 26px; width: 100%;">Other Settings</button>
+                    <div class="content">
+                        <!--<h3 style="margin:18px 10px 18px 26px;">Other Settings</h3>-->
+                        <p style="font-size: 16px; margin:0px 0px 4px 26px;">Configuration data</p>
+                        <div class="two_buttons">
+                            <button type="submit" id="deleteconf_id" value="0">DELETE</button>
+                            <button type="submit" id="saveconf_id" value="1" style=" color:#51A0DB;background-color: #1440616e;border-color: #51A0DB;">SAVE</button>
+                        </div>
+                    </div>
                 </div>
 
-            
-            <p style=" margin: 4px 12px 0px 12px; ; color:#dee2e6">ESPclock v2.1 - A project by <strong>telepath</strong></p>
+                <div class="othersettings_form" style="background-color:#1a1a1a;text-align: left; margin-top: 6px;border-style:solid; border-color: #3c3e3f;border-radius: 12px; border-width: 1px;">     
+                    <label style="display: flex; align-items: center; ">
+                            <h3 style="font-size:17px; margin:10px 0px 10px 26px;">Uptime:</h3>
+                            <p id="upt_dd" style="margin:10px 0px 10px 6px;">0</p> 
+                            <p style="margin:10px 0px 10px 6px;">days,</p>
+                            <p id="upt_hh" style="margin:10px 0px 10px 6px;">0</p> 
+                            <p style="margin:10px 0px 10px 6px;">hrs,</p>
+                            <p id="upt_mm" style="margin:10px 0px 10px 6px;">0</p> 
+                            <p style="margin:10px 0px 10px 6px;">min</p>
+                    </label>
+                    <!--<label style="display: flex; align-items: center; ">
+                    <p style="margin:0px 0px 10px 26px;">Active since: </p>
+                    <p id="started" style="margin:0px 0px 10px 6px;">?</p> 
+                    </label>-->
+                </div>
+          
+            <p style="font-weight:450 ; background: linear-gradient(45deg,#a270ff,#ff0f3b);background-clip: text; margin: 4px 12px 0px 12px; ; color: transparent;">ESPclock v2.2 • A project by <strong>telepath</strong></p>
     </div>
                
 <svg style="display: none;">
@@ -513,7 +633,7 @@ input:checked + .slider:before {
         }
     }
 
-     function enable_button(button_id, background_color, color, bordercolor){
+    function enable_button(button_id, background_color, color, bordercolor){
         button_id.removeAttribute("disabled", "");
         button_id.style.backgroundColor = background_color;
         button_id.style.cursor = "pointer";
@@ -526,22 +646,74 @@ input:checked + .slider:before {
         }
     }
 
+        
+    let dcounter= document.getElementById("upt_dd");
+    let hcounter= document.getElementById("upt_hh");
+    let mcounter= document.getElementById("upt_mm");
+    let rem_d, rem_h, tothours, totmin;
 
+    function msToUptime(millis, ms_over){
+                //    totdays= data.ms/86400000;
+          
+                //at least a day has passed
+                if(millis>= 86400000){   //days
+                    rem_d= millis%86400000;    //for hours
+                    dcounter.innerText = (49*millov) + Math.trunc((17*ms_over)/24) + Math.trunc(millis/86400000);
 
+                    if(rem_d >= 3600000){   //calculate hours
+                        hcounter.innerText = ((17*ms_over)%24) + Math.trunc((5*ms_over)%60) + Math.trunc(rem_d/3600000);
+                        //tothours = rem_d/3600000;
+                        
+                        rem_h= rem_d%3600000;
+                        if(rem_h <3600000){
+                              mcounter.innerText= ((5*ms_over)%60) + Math.trunc(rem_h/60000);
+                        }
+                    }
+                    else if(rem_d < 3600000){   //if millis are not enough to make an hour, then calculates minutes
+
+                        hcounter.innerText = ((17*ms_over)%24) + Math.trunc((5*ms_over)%60);    //🔴MUST TEST THIS LINE
+                        mcounter.innerText= ((5*ms_over)%60) + Math.trunc(rem_d/60000);
+                        //totmin= rem_d/60000;
+                    }
+                }
+
+                //at least 1hr has passed
+                else if(millis<86400000 && millis>=3600000){ 
+                    hcounter.innerText = ((17*ms_over)%24) + Math.trunc((5*ms_over)%60) + Math.trunc(millis/3600000);
+                    rem_h= millis%3600000;
+                    if(rem_h <3600000){
+                        mcounter.innerText= ((5*ms_over)%60) + Math.trunc(rem_h/60000);
+                    }
+                }
+
+                //at least 1 min has passed
+                else if(millis>=60000 && millis<3600000){   
+                    mcounter.innerText= ((5*ms_over)%60) + Math.trunc(millis/60000);
+                }
+            };
+
+        function uptimeUpdate(){
+            fetch("/uptime")
+                .then(data=> data.json())
+                .then(data=> {
+                    msToUptime(data.ms, data.msovfl);
+                });
+        }
 
     const deleteconf = document.getElementById("deleteconf_id");
             
     //onload() is mandatory, otherwise won't run the 1st fetch
     //it activates when server.on("/") function is called
-    window.onload = function () {     
+    window.onload = function () {        
+        //networkFetch("/scan");        
 
         //if ESP is already connected, setup page is loaded with wifi settings greyed-out and disabled    
         fetch("/uicheck")
             .then(data=> data.json())
             .then(data=> {
 
-            br_tag.innerText = data.bright;
-            slider.value = data.bright;
+            br_tag.innerText = data.bright; //display brightness value
+            slider.value = data.bright;     //update slider with current brightness
                                      
             if(data.conn === true){
 
@@ -568,9 +740,9 @@ input:checked + .slider:before {
                 twelve.setAttribute("checked", "");
             }
 
+            msToUptime(data.millis, data.msovfl);  
             if(data.config===0){
                 //console.log("config NOT exists");
-
                 disable_button(deleteconf, "#1a1a1a","#9c9c9c", "#4E4E56");
                 saveconf.innerText = "SAVE";
             }
@@ -582,8 +754,9 @@ input:checked + .slider:before {
 
                 disable_button(saveconf, "#1a1a1a","#9c9c9c", "#4E4E56");
             }
-
         });
+        
+        window.setInterval(uptimeUpdate, 300000);
     }
 
     //-------------
@@ -602,7 +775,6 @@ input:checked + .slider:before {
 
     const refresh_but = document.getElementById("refresh");
     refresh_but.addEventListener("click", networkRefresh);
-
 
     //--------------
     //new custom password toggler (eye)
@@ -705,9 +877,7 @@ input:checked + .slider:before {
 
                                     setTimeout(()=>{
                                         popup_span_elem.classList.remove("show");
-
                                         enable_button(connect_but, "#9a031e");
-                                        
                                         refresh_but.removeAttribute("disabled");
                                         refresh_but.style.cursor = "pointer";
                                         document.querySelectorAll("path")[0].style.fill="#dee2e6";
@@ -740,11 +910,9 @@ input:checked + .slider:before {
                 //select of all of the options from ssid_list
                 let ssid_by_user_opt = select_list.querySelectorAll("option");
                 let ssid_by_user_name = ssid_by_user_opt[ssid_by_user_num].innerText;
-
                 //console.log("chosen SSID is: ", ssid_by_user_name);
 
                 fetch("/sendcreds", {
-                    
                     method: "POST",
                     headers: {
                     'Content-Type': "application/json"
@@ -870,8 +1038,107 @@ input:checked + .slider:before {
                     console.log(response.status);
                 });        
             }
+//-----------------------------------------
 
+var coll = document.getElementsByClassName("collapsible");
+var i;
 
+for (i = 0; i < coll.length; i++) {
+  coll[i].addEventListener("click", function() {
+    this.classList.toggle("active");
+    var content = this.nextElementSibling;
+    if (content.style.display === "block") {
+      content.style.display = "none";
+    } else {
+      content.style.display = "block";
+    }
+  });
+}
+
+//--------------------------------------Alarm 
+/*
+let mon = document.getElementById("mon");
+let tue = document.getElementById("tue");
+let wed = document.getElementById("wed");
+let thu = document.getElementById("thu");
+let fri = document.getElementById("fri");
+let sat = document.getElementById("sat");
+let sun = document.getElementById("sun");
+
+function days_handler(){
+    if(this.value ==="0" ){
+        this.style.backgroundColor = "#ae0423";
+        this.setAttribute("value", "1"); 
+    }
+    else{
+        this.style.backgroundColor = "#444444";
+        this.setAttribute("value", "0"); 
+    }
+}
+
+mon.addEventListener("click", days_handler);
+tue.addEventListener("click", days_handler);
+wed.addEventListener("click", days_handler);
+thu.addEventListener("click", days_handler);
+fri.addEventListener("click", days_handler);
+sat.addEventListener("click", days_handler);
+sun.addEventListener("click", days_handler);
+
+const al_time = document.getElementById("alarm_time");
+const snooze = document.getElementById("snooze");
+//const ringtone = document.getElementById("");
+
+const setalarm = document.getElementById("setalarm_id");
+const deletealarm= document.getElementById("deletealarm_id");
+
+function edit_alarm(){
+
+    fetch("/alarm", {     dont delete!!
+                    method: "POST",
+                    headers: {
+                        'Content-Type': "application/json"
+                    },            
+       body: JSON.stringify({"set": ((this.value == 1) ? true : false), "hh": ore, "mm":minuti, "dd": giorni, "snz":  snooze}) //sends the value of the button that calls the function 
+    })
+
+                    
+    if(this.value == 0){
+        disable_button(deletealarm, "#1a1a1a","#9c9c9c", "#4E4E56");
+
+        fetch("/alarm", {
+            method: "POST",
+            headers: {
+                'Content-Type': "application/json"
+            },            
+            body: JSON.stringify({"set": false}) //sends the value of the button that calls the function 
+        })      
+      
+        enable_button(setalarm, "#ae63e427", "#AF63E4", "#AF63E4");
+        setalarm.innerText = "SET ALARM";            
+    }
+
+    //if user saves config, deleteconf button is enabled
+    else{   
+        disable_button(setalarm, "#1a1a1a","#9c9c9c", "#4E4E56"); 
+        setalarm.innerText = "ALARM SET"; 
+        enable_button(deletealarm, "#740c0c45", "#BA1E16", "#BA1E16"); 
+        
+        fetch("/alarm", {
+            method: "POST",
+            headers: {
+                'Content-Type': "application/json"      //brocco
+            },            //snooze meglio metterlo come input type number 
+            body: JSON.stringify({"set": true, "time": al_time.value , "dd": giorni, "snz":  snooze.value}) //sends the value of the button that calls the function 
+        })
+
+        
+    } 
+        
+}
+setalarm.addEventListener("click", edit_alarm);
+deletealarm.addEventListener("click", edit_alarm);*/
+
+//-----------------------------------------Configuration
             const saveconf = document.getElementById("saveconf_id");
             //deleteconf reference is up
 
@@ -914,7 +1181,7 @@ input:checked + .slider:before {
            
             saveconf.addEventListener("click", edit_conf);
             deleteconf.addEventListener("click", edit_conf);
-/*UPTIME WILL DISPLAY TIME AS DAYS AND HOURS -> e.g. 4d 22h (REFRESH EVERY 1HR)*/
+
 </script>      
 </body>
 </html>
