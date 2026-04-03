@@ -738,10 +738,26 @@ void loop() {
             colon=true;
           }
         }
-        
+
+			//if blink==0
         else{
-            mydisplay.showNumberDecEx(timeinfo.tm_hour, 0b01000000, true, 2, 0);
-            mydisplay.showNumberDecEx(timeinfo.tm_min, 0b01000000, true, 2, 2);
+			if(!twelve){
+            	mydisplay.showNumberDecEx(timeinfo.tm_hour, 0b01000000, true, 2, 0);
+            	mydisplay.showNumberDecEx(timeinfo.tm_min, 0b01000000, true, 2, 2);
+			}
+
+			else{
+                if(timeinfo.tm_hour <= 12){
+                  mydisplay.showNumberDecEx(timeinfo.tm_hour, 0b01000000, true, 2, 0);
+                 
+                }
+
+                else{
+                  mydisplay.showNumberDecEx(timeinfo.tm_hour-12, 0b01000000, true, 2, 0);
+                }
+
+                mydisplay.showNumberDecEx(timeinfo.tm_min, 0b01000000, true, 2, 2);
+              }
         }
         
     }
