@@ -1,5 +1,6 @@
 [![Static Badge](https://img.shields.io/badge/SLIM_case-MakerWorld-%2308bf08?style=flat&logo=bambulab)](https://makerworld.com/it/models/1594116-espclock-digital-clock#profileId-2069321)
 [![Static Badge](https://img.shields.io/badge/BOLD_case-MakerWorld-%2308bf08?style=flat&logo=bambulab)](https://makerworld.com/it/models/2405754-espclock-bold-digital-clock)
+[![Static Badge](https://img.shields.io/badge/BIG_case-MakerWorld-%2308bf08?style=flat&logo=bambulab)](https://makerworld.com/it/models/2616382-espclock-big-digital-clock#profileId-2887323)
 
 ![GitHub Repo stars](https://img.shields.io/github/stars/telepath9/ESPclock?style=social&logo=github)
 
@@ -11,6 +12,7 @@ Welcome to the page of my (W.I.P.) project called
 which is a smart clock that connects to a NTP server to get the current time. 
 It uses a ESP8266 (Wemos D1 mini) or ESP32 (XIAO ESP32 C3).
 
+<img src="https://github.com/telepath9/ESPclock/blob/092779388d558fc8df550596075db075423a6bf2/pics/big.jpeg" alt="Alt Text" width="100%" height="100%">
 <img src="https://github.com/telepath9/ESPclock/blob/6b2b2224a42deda354a8a7220dcf724643eb9c2e/pics/pic1.jpg" alt="Alt Text" width="100%" height="100%">
 <img src="https://github.com/telepath9/ESPclock/blob/d3ea40822622406152dad12554adbceba28abb7e/pics/espclock_bold.jpg" alt="Alt Text" width="100%" height="100%">
 
@@ -59,8 +61,7 @@ It uses a ESP8266 (Wemos D1 mini) or ESP32 (XIAO ESP32 C3).
 - [ ] Adding 1 or 2 buttons to the case
 - [ ] ESPhome or Homeassistant integration
 - [ ] HA support
-- [ ] New display support (will be revealed soon)
-
+- [x] TM1652 0.8" display support https://it.aliexpress.com/item/1005007337668399.html?spm=a2g0o.order_list.order_list_main.10.47683696Rt836v&gatewayAdapt=glo2ita	
 
 <h2>🛒 PART LIST</h2>
 <details>
