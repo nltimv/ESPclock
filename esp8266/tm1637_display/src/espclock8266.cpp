@@ -8,6 +8,7 @@
 #include <LittleFS.h>      //to access to filesystem
 #include "TM1637Display.h"
 #include <time.h>
+#include <math.h>
 
 //JSON optimizations
 #define ARDUINOJSON_SLOT_ID_SIZE 1
@@ -123,8 +124,8 @@ void printLocalTime(){
 }
 */
 
-const char *ntp_addr;
-int gmt_offset;
+const char *ntp_addr = "pool.ntp.org";
+const char *tz_posix = "UTC0";
 bool start_NtpClient = false;
 
 
@@ -137,100 +138,71 @@ void wifiScan(){
 
     byte n = WiFi.scanNetworks();
     Serial.print(n);
-    Serial.println(" network(s) found. Displaying the first 5");
+    Serial.println(" network(s) found.");
 
     //---------------------------------------------x
     //SSIDs found are stored in json
-    //arduinoJson7 doesn't use static/dynamicJsonDocument anymore, but it uses only JsonDocument
-    //---------------------------------------------x    
-      
-    //If json doesn't exists yet, it creates it
-    if(!LittleFS.exists("/network_list.json")){
-        JsonDocument net_list;
-        //Serial.println("Network list doesn't exists. Creating it now..."); 🟠
+    //sort by RSSI (strongest first) and remove duplicate SSID names
+    //---------------------------------------------x
+    JsonDocument net_list;
+    JsonArray network = net_list["network"].to<JsonArray>();
 
-        //if the number of networks found is <5 (so from [0-4])...
-        if(n<5){
-            
-            //stores number of found networks in json
-            net_list["found"] = n;
-            JsonArray network = net_list["network"].to<JsonArray>();
+    bool *used = new bool[n]();
 
-            for(byte j = 0; j < n; j++){
-              JsonArray network_n_credentials = network[j]["credentials"].to<JsonArray>();
-              network_n_credentials.add(WiFi.SSID(j));
-              network_n_credentials.add("");
-            }
+    for(byte picked = 0; picked < n; picked++){
+      int bestIndex = -1;
+      int32_t bestRssi = -1000;
+
+      for(byte i = 0; i < n; i++){
+        if(used[i]){
+          continue;
         }
 
-        //if it finds >5 networks, it will display only the top five networks, with index: [0-4]
-        else{
-          
-          net_list["found"] = 5;
-          JsonArray network = net_list["network"].to<JsonArray>();
-
-          for(byte j = 0; j < 5; j++){
-              JsonArray network_n_credentials = network[j]["credentials"].to<JsonArray>();
-              network_n_credentials.add(WiFi.SSID(j));
-              network_n_credentials.add("");
-          }
+        int32_t currentRssi = WiFi.RSSI(i);
+        if(bestIndex == -1 || currentRssi > bestRssi){
+          bestIndex = i;
+          bestRssi = currentRssi;
+        }
       }
 
-      //---------------------------------------------x
-      //After creating JSON file (jsondocument), it must be stored in FS
-      //---------------------------------------------x
-      File fx = LittleFS.open("/network_list.json", "w");
+      if(bestIndex < 0){
+        break;
+      }
 
-      //serializes json and passes it to "fx" var
-      serializeJsonPretty(net_list, fx);
-      fx.close();
+      used[bestIndex] = true;
+
+      String ssidName = WiFi.SSID(bestIndex);
+      if(ssidName.length() == 0){
+        continue;
+      }
+
+      bool duplicate = false;
+      for(JsonVariant entry : network){
+        const char* existingSsid = entry["credentials"][0] | "";
+        if(ssidName.equals(existingSsid)){
+          duplicate = true;
+          break;
+        }
+      }
+
+      if(duplicate){
+        continue;
+      }
+
+      JsonArray network_n_credentials = network[network.size()]["credentials"].to<JsonArray>();
+      network_n_credentials.add(ssidName);
+      network_n_credentials.add("");
     }
 
+    delete[] used;
 
-    //---------EXISTING JSON---------------------
-    //2. IF JSON ALREADY EXISTS: access to json, reset it, then add new networks to it
-    else{
-      //Serial.println("Network list already exists! Updating it..."); 🟠
-      JsonDocument net_listUp;
-     
-      //1. fetch and open json from FS, then deserializes it
-      File fxup = LittleFS.open("/network_list.json", "w+");
-      deserializeJson(net_listUp, fxup);
+    net_list["found"] = network.size();
 
-      //if there are n<5 networks
-      if(n<5){
-        //updates the values of the entries of the older one
-        net_listUp["found"] = n;
-        JsonArray network = net_listUp["network"].to<JsonArray>();
+    File fx = LittleFS.open("/network_list.json", "w");
+    serializeJsonPretty(net_list, fx);
+    fx.close();
 
-        for(byte k = 0; k < n; k++){
-            JsonArray network_n_credentials = network[k]["credentials"].to<JsonArray>();
-            network_n_credentials.add(WiFi.SSID(k));
-            network_n_credentials.add("");    //
-        }
-      }
-
-      //if there are n>5 networks -> it truncates the list to only 5 ssids
-      else{
-            net_listUp["found"] = 5;
-            JsonArray network = net_listUp["network"].to<JsonArray>();
-            
-            for(byte k = 0; k < 5; k++){
-              //dynamically adds, to each entry "k", a new array to the main array "network"
-              JsonArray network_n_credentials = network[k]["credentials"].to<JsonArray>();
-
-              //adds SSID name to the entry[k][0]
-              network_n_credentials.add(WiFi.SSID(k));
-
-              //adds pw field (initially empty) to entry[k][1] 
-              network_n_credentials.add("");
-            }
-      }
-
-      //3. serializing
-      serializeJsonPretty(net_listUp, fxup);
-      fxup.close();
-    }     
+    WiFi.scanDelete();
 }
 
 void checkConfig(void){
@@ -283,11 +255,19 @@ void checkConfig(void){
         connected=true;
         Serial.println("WIFI RESTORED");
 
-        start_NtpClient=true;
-        ntp_addr= strdup(load_cf["ntp_ad"]); 
-        gmt_offset = load_cf["offset"];   
-        
-        configTime(gmt_offset*3600, 3600, "ntp1.inrim.it");
+        if(load_cf["ntp_ad"].is<const char*>()){
+          ntp_addr = strdup(load_cf["ntp_ad"]);
+        }
+
+        if(load_cf["tz"].is<const char*>()){
+          tz_posix = strdup(load_cf["tz"]);
+          configTzTime(tz_posix, ntp_addr);
+          start_NtpClient=true;
+        }
+        else{
+          start_NtpClient=false;
+          Serial.println(F("Missing timezone in config.json. Re-save time settings from WebUI."));
+        }
   
         brightness = (uint8_t)load_cf["br"];
         mydisplay.setBrightness(brightness);
@@ -388,6 +368,8 @@ void setup() {
     uicheck_json["blink"] = blink;
     uicheck_json["twelve"] = twelve;
     uicheck_json["config"] = (LittleFS.exists("/config.json")) ? 1 : 0;
+    uicheck_json["ntp"] = ntp_addr;
+    uicheck_json["tz"] = tz_posix;
 
     String uc_str;
     serializeJson(uicheck_json, uc_str);
@@ -485,9 +467,15 @@ void setup() {
     JsonDocument ntp_json;
     deserializeJson(ntp_json, data);
 
-    ntp_addr = strdup(ntp_json["ntp_addr"]); 
-    gmt_offset = (int)atoi(ntp_json["offset"]);
-    configTime(gmt_offset*3600, 3600, "ntp1.inrim.it"); 
+    if(ntp_json["ntp_addr"].is<const char*>()){
+      ntp_addr = strdup(ntp_json["ntp_addr"]);
+    }
+
+    if(ntp_json["tz"].is<const char*>()){
+      tz_posix = strdup(ntp_json["tz"]);
+    }
+
+    configTzTime(tz_posix, ntp_addr);
   
     if(start_NtpClient == false){
       start_NtpClient=true;
@@ -571,14 +559,14 @@ void setup() {
     bool saveconfig = scf_json["save"];
     //Serial.println(saveconfig);
 
-    if((!LittleFS.exists("/config.json") && saveconfig==1)){ //user wants to save config
+    if(saveconfig==1){ //user wants to save/overwrite config
               
       JsonDocument config;
 
       config[F("ssid")] = ssid;           //const *char
       config[F("pw")] = password;         //const *char
       config[F("ntp_ad")] = ntp_addr;     //const *char
-      config[F("offset")] = gmt_offset;   //offset saved as int
+      config[F("tz")] = tz_posix;         //POSIX timezone string
       config[F("br_auto")] = br_auto;     //bool as 1 or 0
       config[F("br")] = brightness;       //uint8_t
       config[F("blink")] = blink;        //bool as 1 or 0
@@ -664,18 +652,18 @@ void loop() {
         if(blink==1){
             if(colon==true){   //colon is ON
               if(!twelve){
-                mydisplay.showNumberDecEx(timeinfo.tm_hour, 0b01000000, true, 2, 0);
+                mydisplay.showNumberDecEx(timeinfo.tm_hour, 0b01000000, false, 2, 0);
                 mydisplay.showNumberDecEx(timeinfo.tm_min, 0b01000000, true, 2, 2);
               }
 
               else{
                 if(timeinfo.tm_hour <= 12){
-                  mydisplay.showNumberDecEx(timeinfo.tm_hour, 0b01000000, true, 2, 0);
+                  mydisplay.showNumberDecEx(timeinfo.tm_hour, 0b01000000, false, 2, 0);
                  
                 }
 
                 else{
-                  mydisplay.showNumberDecEx(timeinfo.tm_hour-12, 0b01000000, true, 2, 0);
+                  mydisplay.showNumberDecEx(timeinfo.tm_hour-12, 0b01000000, false, 2, 0);
                 }
 
                 mydisplay.showNumberDecEx(timeinfo.tm_min, 0b01000000, true, 2, 2);
@@ -689,17 +677,17 @@ void loop() {
             //colon is OFF
             
               if(!twelve){
-                mydisplay.showNumberDecEx(timeinfo.tm_hour, 0, true, 2, 0);
+                mydisplay.showNumberDecEx(timeinfo.tm_hour, 0, false, 2, 0);
                 mydisplay.showNumberDecEx(timeinfo.tm_min, 0, true, 2, 2);
               }
 
               else{ //if 12hr mode is active
                 if(timeinfo.tm_hour <= 12){
-                  mydisplay.showNumberDecEx(timeinfo.tm_hour, 0, true, 2, 0);
+                  mydisplay.showNumberDecEx(timeinfo.tm_hour, 0, false, 2, 0);
                 }
                 
                 else{
-                  mydisplay.showNumberDecEx(timeinfo.tm_hour-12, 0, true, 2, 0);
+                  mydisplay.showNumberDecEx(timeinfo.tm_hour-12, 0, false, 2, 0);
                 }
 
                 mydisplay.showNumberDecEx(timeinfo.tm_min, 0, true, 2, 2);
@@ -710,7 +698,7 @@ void loop() {
         }
         
         else{
-            mydisplay.showNumberDecEx(timeinfo.tm_hour, 0b01000000, true, 2, 0);
+          mydisplay.showNumberDecEx(timeinfo.tm_hour, 0b01000000, false, 2, 0);
             mydisplay.showNumberDecEx(timeinfo.tm_min, 0b01000000, true, 2, 2);
         }
         
