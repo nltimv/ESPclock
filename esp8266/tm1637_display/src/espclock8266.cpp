@@ -571,8 +571,18 @@ void setup() {
               
       JsonDocument config;
 
-      config[F("ssid")] = ssid;           //const *char
-      config[F("pw")] = password;         //const *char
+      if(!setup_mode && LittleFS.exists("/config.json")){
+        // Normal mode: read existing Wi-Fi credentials from file to preserve them
+        File existing = LittleFS.open("/config.json", "r");
+        JsonDocument existing_cf;
+        deserializeJson(existing_cf, existing);
+        existing.close();
+        config[F("ssid")] = existing_cf[F("ssid")];
+        config[F("pw")] = existing_cf[F("pw")];
+      } else {
+        config[F("ssid")] = ssid;           //const *char
+        config[F("pw")] = password;         //const *char
+      }
       config[F("ntp_ad")] = ntp_addr;     //const *char
       config[F("tz")] = tz_posix;         //POSIX timezone string
       config[F("br_auto")] = br_auto;     //bool as 1 or 0
@@ -749,11 +759,13 @@ void loop() {
         connected = true;
         initMDNS();
 
-        //first-time setup: auto-save WiFi credentials and schedule AP shutdown
+        //first-time setup: auto-save credentials + defaults and schedule AP shutdown
         if(setup_mode){
           JsonDocument config;
           config[F("ssid")] = ssid;
           config[F("pw")] = password;
+          config[F("ntp_ad")] = ntp_addr;
+          config[F("tz")] = tz_posix;
           config[F("br_auto")] = br_auto;
           config[F("br")] = brightness;
           config[F("blink")] = blink;
@@ -762,6 +774,8 @@ void loop() {
           File fc = LittleFS.open("/config.json", "w+");
           serializeJsonPretty(config, fc);
           fc.close();
+          configTzTime(tz_posix, ntp_addr);
+          start_NtpClient = true;
           setup_mode = false;
           ap_shutdown_start = millis();
           ap_shutdown_pending = true;
