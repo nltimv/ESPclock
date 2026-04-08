@@ -37,7 +37,12 @@ const char* password;
 bool creds_available=false;
 bool connected=false;   //wifi connection state
 
-const char *esp_ssid = "ESPclock";
+#ifndef DEVICE_ID
+#define DEVICE_ID "0000"
+#endif
+
+const char *esp_ssid = "ESPclock-" DEVICE_ID;
+const char *mdns_name = "espclock-" DEVICE_ID;
 
 //AP pw must be at least 8 chars, otherwise AP won't be customized 
 const char *esp_password =  "waltwhite64";
@@ -47,6 +52,10 @@ bool newScan = false;
 
 //connection attempts --> when it is set to 0 again, it means pw is wrong
 uint8_t attempts = 0;
+
+bool setup_mode = true;           //true = no config saved yet (setup mode); false = normal mode
+unsigned long ap_shutdown_start = 0; //millis() snapshot when AP shutdown was scheduled
+bool ap_shutdown_pending = false; //true = AP shutdown timer is active
 
 //creating an Asyncwebserver object
 AsyncWebServer server(80);
@@ -253,6 +262,7 @@ void checkConfig(void){
 
         attempts=0;
         connected=true;
+        setup_mode=false;
         Serial.println("WIFI RESTORED");
 
         if(load_cf["ntp_ad"].is<const char*>()){
@@ -289,7 +299,7 @@ void initMDNS(){
 
   MDNS.end();
 
-  if (MDNS.begin("espclock")) {
+  if (MDNS.begin(mdns_name)) {
     MDNS.addService("http", "tcp", 80);
   } else {
     Serial.println("mDNS fail");
@@ -340,16 +350,10 @@ void setup() {
     wifiScan();
   }
   
-  //---------------------------------------------x
-  //PHASE 2: here user choose its ssid and enters pw
-  //---------------------------------------------x
-  
-  //Serial.println("PHASE 2: Configuring AP");  
-  WiFi.softAP(esp_ssid, esp_password, false, 2);     //Starting AP on given credential
-
-  //Serial.print("AP IP address: ");  🟠
-  //Serial.println(WiFi.softAPIP());  🟠           //Default AP-IP is 192.168.4.1
-  //Serial.println(esp_ssid);         🟠
+  //PHASE 2: start AP only in setup mode (no saved config)
+  if(!connected){
+    WiFi.softAP(esp_ssid, esp_password, false, 2);     //Starting AP on given credential
+  }
 
   //Route for root index.html
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){ 
@@ -370,6 +374,8 @@ void setup() {
     uicheck_json["config"] = (LittleFS.exists("/config.json")) ? 1 : 0;
     uicheck_json["ntp"] = ntp_addr;
     uicheck_json["tz"] = tz_posix;
+    uicheck_json["setup_mode"] = setup_mode;
+    uicheck_json["ap_ssid"] = esp_ssid;
 
     String uc_str;
     serializeJson(uicheck_json, uc_str);
@@ -451,7 +457,9 @@ void setup() {
       if(WiFi.status() == WL_CONNECTED){
         //attempts=0;
         Serial.println(password);
-        request->send(200, "application/json", "{\"stat\":\"ok\"}");
+        String ip = WiFi.localIP().toString();
+        String resp = "{\"stat\":\"ok\",\"ip\":\"" + ip + "\",\"mdns\":\"" + String(mdns_name) + "\"}";
+        request->send(200, "application/json", resp);
       }
 
       else{
@@ -482,6 +490,38 @@ void setup() {
     }
     
     request->send(200, "application/json", "{\"ntp\":\"OK\"}");
+  });
+
+  server.on("/setup_timezone", HTTP_POST, [](AsyncWebServerRequest *request){}, NULL, [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total){
+
+    JsonDocument tz_json;
+    deserializeJson(tz_json, data);
+
+    if(tz_json["tz"].is<const char*>()){
+      tz_posix = strdup(tz_json["tz"]);
+    }
+
+    // Update config.json with chosen timezone
+    if(LittleFS.exists("/config.json")){
+      File fr = LittleFS.open("/config.json", "r");
+      JsonDocument saved_cf;
+      deserializeJson(saved_cf, fr);
+      fr.close();
+      saved_cf[F("tz")] = tz_posix;
+      saved_cf.shrinkToFit();
+      File fw = LittleFS.open("/config.json", "w+");
+      serializeJsonPretty(saved_cf, fw);
+      fw.close();
+    }
+
+    configTzTime(tz_posix, ntp_addr);
+    start_NtpClient = true;
+
+    // Schedule AP shutdown after 15-second grace period
+    ap_shutdown_start = millis();
+    ap_shutdown_pending = true;
+
+    request->send(200, "application/json", "{\"status\":\"ok\"}");
   });
 
 
@@ -563,8 +603,18 @@ void setup() {
               
       JsonDocument config;
 
-      config[F("ssid")] = ssid;           //const *char
-      config[F("pw")] = password;         //const *char
+      if(!setup_mode && LittleFS.exists("/config.json")){
+        // Normal mode: read existing Wi-Fi credentials from file to preserve them
+        File existing = LittleFS.open("/config.json", "r");
+        JsonDocument existing_cf;
+        deserializeJson(existing_cf, existing);
+        existing.close();
+        config[F("ssid")] = existing_cf[F("ssid")];
+        config[F("pw")] = existing_cf[F("pw")];
+      } else {
+        config[F("ssid")] = ssid;           //const *char
+        config[F("pw")] = password;         //const *char
+      }
       config[F("ntp_ad")] = ntp_addr;     //const *char
       config[F("tz")] = tz_posix;         //POSIX timezone string
       config[F("br_auto")] = br_auto;     //bool as 1 or 0
@@ -591,7 +641,10 @@ void setup() {
       creds_available = false;
       start_NtpClient=false;
       attempts=0;
-      Serial.println(password);
+      setup_mode=true;
+      ap_shutdown_pending=false;
+      WiFi.mode(WIFI_AP_STA);
+      WiFi.softAP(esp_ssid, esp_password, false, 2);
       Serial.println(F("\n*Config.json DELETED*"));
     }
 
@@ -609,8 +662,11 @@ void loop() {
   
   MDNS.update();
 
-
-  
+  //shut down AP after setup mode transition (15 second grace period for user to read IP/mDNS)
+  if(ap_shutdown_pending && (millis() - ap_shutdown_start) >= 15000UL){
+    WiFi.mode(WIFI_STA);
+    ap_shutdown_pending = false;
+  }
   if(newScan==true){
     wifiScan();
     newScan=false;
@@ -732,10 +788,26 @@ void loop() {
     
       //once connected, exit form while(1) with break, and then from first if since "connected==true" now
       else if(WiFi.status() == WL_CONNECTED){
-        //start_mdns_service();
-        //configTime(gmt_offset*3600, 3600, ntp_addr);
         connected = true;
         initMDNS();
+
+        //first-time setup: auto-save credentials + defaults, defer NTP/AP-shutdown to /setup_timezone
+        if(setup_mode){
+          JsonDocument config;
+          config[F("ssid")] = ssid;
+          config[F("pw")] = password;
+          config[F("ntp_ad")] = ntp_addr;
+          config[F("tz")] = tz_posix;
+          config[F("br_auto")] = br_auto;
+          config[F("br")] = brightness;
+          config[F("blink")] = blink;
+          config[F("twelve")] = twelve;
+          config.shrinkToFit();
+          File fc = LittleFS.open("/config.json", "w+");
+          serializeJsonPretty(config, fc);
+          fc.close();
+          setup_mode = false;
+        }
         break;
       }
 
