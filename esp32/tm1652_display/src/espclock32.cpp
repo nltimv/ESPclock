@@ -1,3 +1,19 @@
+// ESPclock - ESP32 TM1652 display firmware
+// Originally written by telepath9 (https://github.com/telepath9/ESPclock)
+// Licensed under the GNU General Public License v3.0 (GPL-3.0)
+//
+// This file has been modified by nltimv (https://github.com/nltimv).
+// Date of modification: 2026-04-06
+// Changes:
+//   - Added setup_mode flag and automatic AP shutdown after first-time setup
+//   - AP is only started when no configuration has been saved yet (setup mode)
+//   - Auto-saves WiFi credentials on first successful connection
+//   - Fixed NTP initialisation: skipped when NTP address is absent from config
+//   - Allow re-saving configuration (not just on first save)
+//   - Added IP address and mDNS hostname to timezone-setup JSON response
+//   - Added setup_mode and AP SSID to UI status JSON
+//   2026-04-08: IP/mDNS addresses shown as clickable hyperlinks in setup UI
+
 #include <Arduino.h>
 #include <WiFi.h>
 #include <time.h>

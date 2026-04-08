@@ -1,3 +1,17 @@
+<!--
+  ESPclock - Web UI (ESP32)
+  Originally written by telepath9 (https://github.com/telepath9/ESPclock)
+  Licensed under the GNU General Public License v3.0 (GPL-3.0)
+
+  This file has been modified by nltimv (https://github.com/nltimv).
+  Date of modification: 2026-04-06
+  Changes:
+    - Updated UI to support setup_mode flag and display AP SSID
+    - Added support for POSIX timezone strings in time settings
+    - Added separate timezone-setup step with /setup_timezone endpoint
+    - Display NTP server and timezone in settings
+    2026-04-08: IP/mDNS addresses shown as clickable hyperlinks after setup
+-->
 <!DOCTYPE html>
 <html>
 <head>

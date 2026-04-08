@@ -1,3 +1,21 @@
+// ESPclock - ESP8266 TM1637 display firmware
+// Originally written by telepath9 (https://github.com/telepath9/ESPclock)
+// Licensed under the GNU General Public License v3.0 (GPL-3.0)
+//
+// This file has been modified by nltimv (https://github.com/nltimv).
+// Date of modification: 2026-04-06
+// Changes:
+//   - Added DEVICE_ID macro so multiple devices can coexist on the same network
+//   - Added setup_mode flag and automatic AP shutdown after first-time setup
+//   - Replaced GMT offset-based NTP with POSIX timezone string (configTzTime)
+//   - Improved WiFi scan: sorted by signal strength (RSSI), duplicates removed
+//   - AP is only started when no configuration has been saved yet (setup mode)
+//   - Added IP address and mDNS hostname to timezone-setup response
+//   - Added NTP address, timezone, setup_mode, and AP SSID to UI status JSON
+//   - Added new /setup_timezone endpoint for separate timezone configuration
+//   - Various bug fixes and code cleanup
+//   2026-04-08: IP/mDNS addresses shown as clickable hyperlinks in setup UI
+
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
