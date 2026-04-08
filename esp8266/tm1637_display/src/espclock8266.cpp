@@ -37,25 +37,15 @@ const char* password;
 bool creds_available=false;
 bool connected=false;   //wifi connection state
 
-static char device_id[5];
-static char esp_ssid_buf[20];
-static char mdns_name[20];
-const char *esp_ssid = esp_ssid_buf;
+#ifndef DEVICE_ID
+#define DEVICE_ID "0000"
+#endif
+
+const char *esp_ssid = "ESPclock-" DEVICE_ID;
+const char *mdns_name = "espclock-" DEVICE_ID;
 
 //AP pw must be at least 8 chars, otherwise AP won't be customized 
 const char *esp_password =  "waltwhite64";
-
-void generateDeviceId() {
-    const char charset[] = "abcdefghijklmnopqrstuvwxyz0123456789";
-    uint32_t val = ESP.getChipId();
-    for (int i = 3; i >= 0; i--) {
-        device_id[i] = charset[val % 36];
-        val /= 36;
-    }
-    device_id[4] = '\0';
-    snprintf(esp_ssid_buf, sizeof(esp_ssid_buf), "ESPclock-%s", device_id);
-    snprintf(mdns_name, sizeof(mdns_name), "espclock-%s", device_id);
-}
 
 //when true, ESP scan for networks again and overrides the previous networks on net_list
 bool newScan = false;
@@ -318,7 +308,6 @@ void initMDNS(){
 
 void setup() {
   Serial.begin(115200);
-  generateDeviceId();
   
   //display
   mydisplay.setBrightness(7); 
