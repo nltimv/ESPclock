@@ -446,7 +446,39 @@ width: 100%;
                 </div>
                 </div><!--end wifi_fields-->
                 <div id="wifi_connected_msg" style="display:none; padding: 26px 26px 26px 26px; text-align: center; line-height: 1.8;">
-                    <p id="wifi_connected_text" style="font-size: 16px; color: #dee2e6; margin: 0;"></p>
+                    <div id="wifi_tz_setup">
+                        <p id="wifi_connected_info" style="font-size: 16px; color: #dee2e6; margin: 0 0 20px 0;"></p>
+                        <p style="font-size: 14px; color: #6e9cd1; margin: 0 0 8px 0;">Select your timezone:</p>
+                        <select id="setup_tz_select" style="font-size: 15px; padding: 0 0 0 6px; background-color: #444444; color: #bec1c4; width: 240px; height: 40px; border-radius: 6px; border-style: none; margin: 0 0 16px 0;">
+                            <option value="UTC0">UTC</option>
+                            <option value="GMT0BST,M3.5.0/1,M10.5.0">Europe/London</option>
+                            <option value="CET-1CEST,M3.5.0,M10.5.0/3">Europe/Rome</option>
+                            <option value="CET-1CEST,M3.5.0,M10.5.0/3">Europe/Paris</option>
+                            <option value="EET-2EEST,M3.5.0/3,M10.5.0/4">Europe/Helsinki</option>
+                            <option value="MSK-3">Europe/Moscow</option>
+                            <option value="EST5EDT,M3.2.0/2,M11.1.0/2">US/Eastern</option>
+                            <option value="CST6CDT,M3.2.0/2,M11.1.0/2">US/Central</option>
+                            <option value="MST7MDT,M3.2.0/2,M11.1.0/2">US/Mountain</option>
+                            <option value="PST8PDT,M3.2.0/2,M11.1.0/2">US/Pacific</option>
+                            <option value="HST10">US/Hawaii</option>
+                            <option value="AST-3">South America/Buenos Aires</option>
+                            <option value="WAT-1">Africa/Lagos</option>
+                            <option value="EET-2">Africa/Cairo</option>
+                            <option value="SAST-2">Africa/Johannesburg</option>
+                            <option value="GST-4">Asia/Dubai</option>
+                            <option value="IST-5:30">Asia/Kolkata</option>
+                            <option value="ICT-7">Asia/Bangkok</option>
+                            <option value="SGT-8">Asia/Singapore</option>
+                            <option value="JST-9">Asia/Tokyo</option>
+                            <option value="CST-8">Asia/Shanghai</option>
+                            <option value="AEST-10AEDT,M10.1.0,M4.1.0/3">Australia/Sydney</option>
+                            <option value="NZST-12NZDT,M9.5.0,M4.1.0/3">Pacific/Auckland</option>
+                        </select><br>
+                        <button type="button" id="setup_tz_btn" style="cursor: pointer; font-size: 15px; font-weight: 550; width: 240px; height: 40px; text-align: center; border-radius: 8px; border-style: none; color: #ced4da; background-color: #267bbc; user-select: none;">SAVE &amp; FINISH</button>
+                    </div>
+                    <div id="wifi_final_msg" style="display:none;">
+                        <p id="wifi_connected_text" style="font-size: 16px; color: #dee2e6; margin: 0;"></p>
+                    </div>
                 </div>
         </form>
 
@@ -804,6 +836,10 @@ width: 100%;
     const wifi_fields = document.getElementById("wifi_fields");
     const wifi_connected_msg = document.getElementById("wifi_connected_msg");
     const wifi_connected_text = document.getElementById("wifi_connected_text");
+    const wifi_connected_info = document.getElementById("wifi_connected_info");
+    const wifi_tz_setup = document.getElementById("wifi_tz_setup");
+    const wifi_final_msg = document.getElementById("wifi_final_msg");
+    const setup_tz_btn = document.getElementById("setup_tz_btn");
 
       //password toggle
       buttoneye.onclick = function(){
@@ -871,7 +907,7 @@ width: 100%;
                                     clearInterval(asciivar);
 
                                     wifi_fields.style.display = "none";
-                                    wifi_connected_text.innerHTML = "✅ Connected!<br><br>IP: <strong>" + data.ip + "</strong><br>Available at: <strong>" + data.mdns + ".local</strong><br><br>Reconnect to your Wi-Fi network to access settings.";
+                                    wifi_connected_info.innerHTML = "✅ Connected!<br><br>IP: <strong>" + data.ip + "</strong><br>Available at: <strong>" + data.mdns + ".local</strong>";
                                     wifi_connected_msg.style.display = "";
                             }
                                 
@@ -942,6 +978,21 @@ width: 100%;
 
                 pollingfunc();
                 }
+            }
+
+            setup_tz_btn.onclick = function(){
+                const tz_chosen = document.getElementById("setup_tz_select").value;
+                fetch("/setup_timezone", {
+                    method: "POST",
+                    headers: { 'Content-Type': "application/json" },
+                    body: JSON.stringify({"tz": tz_chosen})
+                })
+                .then(response => response.json())
+                .then(() => {
+                    wifi_tz_setup.style.display = "none";
+                    wifi_connected_text.innerHTML = "⏰ Timezone saved!<br><br>Reconnect to your Wi-Fi network to access settings.";
+                    wifi_final_msg.style.display = "";
+                });
             }
 
 

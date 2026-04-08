@@ -492,6 +492,38 @@ void setup() {
     request->send(200, "application/json", "{\"ntp\":\"OK\"}");
   });
 
+  server.on("/setup_timezone", HTTP_POST, [](AsyncWebServerRequest *request){}, NULL, [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total){
+
+    JsonDocument tz_json;
+    deserializeJson(tz_json, data);
+
+    if(tz_json["tz"].is<const char*>()){
+      tz_posix = strdup(tz_json["tz"]);
+    }
+
+    // Update config.json with chosen timezone
+    if(LittleFS.exists("/config.json")){
+      File fr = LittleFS.open("/config.json", "r");
+      JsonDocument saved_cf;
+      deserializeJson(saved_cf, fr);
+      fr.close();
+      saved_cf[F("tz")] = tz_posix;
+      saved_cf.shrinkToFit();
+      File fw = LittleFS.open("/config.json", "w+");
+      serializeJsonPretty(saved_cf, fw);
+      fw.close();
+    }
+
+    configTzTime(tz_posix, ntp_addr);
+    start_NtpClient = true;
+
+    // Schedule AP shutdown after 15-second grace period
+    ap_shutdown_start = millis();
+    ap_shutdown_pending = true;
+
+    request->send(200, "application/json", "{\"status\":\"ok\"}");
+  });
+
 
   server.on("/slider", HTTP_POST, [](AsyncWebServerRequest *request){}, NULL, [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total){
           
@@ -759,7 +791,7 @@ void loop() {
         connected = true;
         initMDNS();
 
-        //first-time setup: auto-save credentials + defaults and schedule AP shutdown
+        //first-time setup: auto-save credentials + defaults, defer NTP/AP-shutdown to /setup_timezone
         if(setup_mode){
           JsonDocument config;
           config[F("ssid")] = ssid;
@@ -774,11 +806,7 @@ void loop() {
           File fc = LittleFS.open("/config.json", "w+");
           serializeJsonPretty(config, fc);
           fc.close();
-          configTzTime(tz_posix, ntp_addr);
-          start_NtpClient = true;
           setup_mode = false;
-          ap_shutdown_start = millis();
-          ap_shutdown_pending = true;
         }
         break;
       }
