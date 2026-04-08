@@ -11,42 +11,42 @@
 
 Welcome to the page of my (W.I.P.) project called 
 
-<img src="https://github.com/telepath9/ESPclock/blob/54c39c18d9204351de640fb42218651ce3664671/pics/newfont.png" alt="Alt Text" width="100%" height="100%">
+<img src="https://github.com/nltimv/ESPclock/blob/54c39c18d9204351de640fb42218651ce3664671/pics/newfont.png" alt="Alt Text" width="100%" height="100%">
 
 which is a smart clock that connects to a NTP server to get the current time. 
 It uses a ESP8266 (Wemos D1 mini) or ESP32 (XIAO ESP32 C3).
 
-<img src="https://github.com/telepath9/ESPclock/blob/092779388d558fc8df550596075db075423a6bf2/pics/big.jpeg" alt="Alt Text" width="100%" height="100%">
-<img src="https://github.com/telepath9/ESPclock/blob/6b2b2224a42deda354a8a7220dcf724643eb9c2e/pics/pic1.jpg" alt="Alt Text" width="100%" height="100%">
-<img src="https://github.com/telepath9/ESPclock/blob/d3ea40822622406152dad12554adbceba28abb7e/pics/espclock_bold.jpg" alt="Alt Text" width="100%" height="100%">
+<img src="https://github.com/nltimv/ESPclock/blob/092779388d558fc8df550596075db075423a6bf2/pics/big.jpeg" alt="Alt Text" width="100%" height="100%">
+<img src="https://github.com/nltimv/ESPclock/blob/6b2b2224a42deda354a8a7220dcf724643eb9c2e/pics/pic1.jpg" alt="Alt Text" width="100%" height="100%">
+<img src="https://github.com/nltimv/ESPclock/blob/d3ea40822622406152dad12554adbceba28abb7e/pics/espclock_bold.jpg" alt="Alt Text" width="100%" height="100%">
 
 
 <h2>📜 INSTRUCTIONS </h2>
 
 1. Install VSCode or <b>VSCodium</b> (i prefer VSCodium because it basically is VSCode but <b>without</b> telemetry);
 
-2. Install PIOarduino extension on VSCode/VSCodium;
+2. Install PlatformIO extension on VSCode/VSCodium;
 
-3. Download the latest .zip file that you can find in the "Release" section, extract it, then open in VSCode/VSCodium the ESPclock project directory;
+3. Clone the repository and open the esp8266/tm1637_display folder in PlatformIO
 
-4. Select the PIOarduino extension in VSCode/VSCodium, then you have to store the html page into the esp8266 flash memory in two steps:
+4. From the PlatformIO extension, store the html page into the esp8266 flash memory in two steps:
 	1. Platform -> Build filesystem image
 	2. Platform -> Upload filesystem image
 
-5. Now lets upload the C/C++ code. Again from the PIOarduino extension in VSCode/VSCodium, go to:
+5. Now lets upload the C/C++ code. Again from the PlatformIO extension in VSCode/VSCodium, go to:
 	1. General -> Build
 	2. General -> Upload
 
-6. Now let's connect PC or mobile to the ESPclock access point (SSID: `ESPclock` or `ESPclock-<DEVICE_ID>` if a device ID was set at compile time), with the password: waltwhite64
+6. Now let's connect PC or mobile to the ESPclock access point (SSID: `ESPclock-<DEVICE_ID>`, with the password: waltwhite64
 
-7. After connecting to the ESPclock's AP, open your browser and paste in the address bar: http://192.168.4.1/ or `espclock.local` (or `espclock-<DEVICE_ID>.local` if a device ID was set).
+7. After connecting to the ESPclock's AP, open your browser and paste in the address bar: http://192.168.4.1/ (or `espclock-<DEVICE_ID>.local`).
 
-8. From the web UI, first add your home network, then the NTP server that matches your region, and finally your POSIX timezone string (e.g. `CET-1CEST,M3.5.0,M10.5.0/3` for Central European Time). The access point will shut down automatically ~15 seconds after setup completes, and the web UI will show a clickable link to the clock's new IP address and mDNS hostname.
+8. From the web UI, first add your home network, and then choose your timezone. The IP of the device on your network will be shown. Connect back to your own network and enter the IP to configure the device.
 
 9. And we're done! Hope that you liked my project! If you have any suggestions, let me know!
 
 <h2>📱 WEB UI </h2>
-<img src="https://github.com/telepath9/ESPclock/blob/0129184b364e81b9ba27bd0f2a37386c2fa2500b/pics/v2.2.1.jpg" alt="Alt Text" width="100%" height="100%">
+<img src="https://github.com/nltimv/ESPclock/blob/0129184b364e81b9ba27bd0f2a37386c2fa2500b/pics/v2.2.1.jpg" alt="Alt Text" width="100%" height="100%">
 
 <h2>🤖 CURRENT FEATURES</h2>
 
@@ -94,29 +94,31 @@ It uses a ESP8266 (Wemos D1 mini) or ESP32 (XIAO ESP32 C3).
 <h2>🔌 BOARD WIRING</h2>
 <details> 
 <summary><b>XIAO ESP32 C3</b></summary>
-<img src="https://github.com/telepath9/ESPclock/blob/fa035fd003b75fdb8b4b9cf68d04e8ba993e35fc/pics/xiao-top1.0.jpg" alt="Alt Text" width="100%" height="100%">
-<img src="https://github.com/telepath9/ESPclock/blob/ff830831e95c264ad7939fba758ce32de801831d/pics/xiao_top3_w.jpg" alt="Alt Text" width="100%" height="100%">
+<img src="https://github.com/nltimv/ESPclock/blob/fa035fd003b75fdb8b4b9cf68d04e8ba993e35fc/pics/xiao-top1.0.jpg" alt="Alt Text" width="100%" height="100%">
+<img src="https://github.com/nltimv/ESPclock/blob/ff830831e95c264ad7939fba758ce32de801831d/pics/xiao_top3_w.jpg" alt="Alt Text" width="100%" height="100%">
 </details>
 <details> 
 <summary><b>ESP8266 (Wemos D1 Mini 3.0.0)</b></summary> 
-<img src="https://github.com/telepath9/ESPclock/blob/0defb72bb5107271487eb4c452812158a96b2c5e/pics/top_pcb.jpg" alt="Alt Text" width="100%" height="100%">
-<img src="https://github.com/telepath9/ESPclock/blob/0defb72bb5107271487eb4c452812158a96b2c5e/pics/bottom.jpg" alt="Alt Text" width="100%" height="100%">
-<img src="https://github.com/telepath9/ESPclock/blob/ebe4f234343fb306297fa49ef42fd830830b3c9a/pics/esp8266_pinout.jpg" alt="Alt Text" width="100%" height="100%">
+<img src="https://github.com/nltimv/ESPclock/blob/0defb72bb5107271487eb4c452812158a96b2c5e/pics/top_pcb.jpg" alt="Alt Text" width="100%" height="100%">
+<img src="https://github.com/nltimv/ESPclock/blob/0defb72bb5107271487eb4c452812158a96b2c5e/pics/bottom.jpg" alt="Alt Text" width="100%" height="100%">
+<img src="https://github.com/nltimv/ESPclock/blob/ebe4f234343fb306297fa49ef42fd830830b3c9a/pics/esp8266_pinout.jpg" alt="Alt Text" width="100%" height="100%">
 </details>
 
 <h2>🪛 HOW TO ASSEMBLE ESPclock</h2>
-<img src="https://github.com/telepath9/ESPclock/blob/fc197cfd72fc6f489c0196dcbc484aab385d8b21/pics/howtoassemble.webp" alt="Alt Text" width="100%" height="100%">
+<img src="https://github.com/nltimv/ESPclock/blob/fc197cfd72fc6f489c0196dcbc484aab385d8b21/pics/howtoassemble.webp" alt="Alt Text" width="100%" height="100%">
 
 <h2>🤝 CODE CONTRIBUTIONS</h2>
 The original project is a personal project by telepath9, who does not accept pull requests upstream.
-This fork welcomes issues and suggestions — feel free to open an issue if you spot something or have an idea.
+This fork welcomes issues and suggestions. Feel free to open an issue if you spot something or have an idea.
 
 <h2>❤️ SUPPORT</h2>
 If you liked the project and want to financially contribute, you can buy me a coffee! <br><br>
 
-[![Paypal Badge](https://img.shields.io/badge/Donate-PayPal-blue?logo=paypal)](https://www.paypal.com/donate/?hosted_button_id=NBJ3VHSWGQK7A)
-[![Static Badge](https://img.shields.io/badge/Donate-LiberaPay-%23f6c915?style=flat&logo=liberapay&link=https%3A%2F%2Fliberapay.com%2Ftelepath%2Fdonate)](https://liberapay.com/telepath/donate)
+[![Ko-fi Badge](https://img.shields.io/badge/Donate-Ko--fi-%23FF6433?logo=kofi&logoColor=white
+)](https://ko-fi.com/nltimv)
 
+
+Support the original creator [here](https://github.com/telepath9/ESPclock?tab=readme-ov-file#%EF%B8%8F-support).
 
 <h2>⚠️ TROUBLESHOOTING</h2>
 There are (at the moment) two errors that can be displayed from the 7-segment display:
