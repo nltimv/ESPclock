@@ -865,6 +865,8 @@ width: 100%;
       //to know if i'm connected to wifi
       let polling_state= false;
       let connected = false;
+      let setup_ip = "";
+      let setup_mdns = "";
       const ascii_anim = ["⚫  ⚪  ⚪", "⚪  ⚫  ⚪", "⚪  ⚪  ⚫"];
 
       //--------------------------------x
@@ -906,8 +908,11 @@ width: 100%;
 
                                     clearInterval(asciivar);
 
+                                    setup_ip = data.ip;
+                                    setup_mdns = data.mdns;
+
                                     wifi_fields.style.display = "none";
-                                    wifi_connected_info.innerHTML = "✅ Connected!<br><br>IP: <strong>" + data.ip + "</strong><br>Available at: <strong>" + data.mdns + ".local</strong>";
+                                    wifi_connected_info.innerHTML = "✅ Connected!";
                                     wifi_connected_msg.style.display = "";
                             }
                                 
@@ -990,7 +995,10 @@ width: 100%;
                 .then(response => response.json())
                 .then(() => {
                     wifi_tz_setup.style.display = "none";
-                    wifi_connected_text.innerHTML = "⏰ Timezone saved!<br><br>Reconnect to your Wi-Fi network to access settings.";
+                    wifi_connected_text.innerHTML = "⏰ Setup complete!<br><br>"
+                        + "IP: <strong><a href='http://" + setup_ip + "' style='color:#6e9cd1;'>http://" + setup_ip + "</a></strong><br>"
+                        + "Available at: <strong><a href='http://" + setup_mdns + ".local' style='color:#6e9cd1;'>http://" + setup_mdns + ".local</a></strong><br><br>"
+                        + "Reconnect to your Wi-Fi network to access settings.";
                     wifi_final_msg.style.display = "";
                 });
             }
