@@ -405,7 +405,7 @@ width: 100%;
     <!--style="background: linear-gradient(45deg,#6e2fe3,#ae0423);"-->
     <div class="flex_container">
         <h2 style="margin: 8px 0px 8px 0px;">ESPclock</h2>
-        <form style=" background-color: #1a1a1a; text-align: left;border-style:solid; border-color:#3c3e3f;border-radius: 12px; border-width: 1px;">
+        <form id="wifi_section" style=" background-color: #1a1a1a; text-align: left;border-style:solid; border-color:#3c3e3f;border-radius: 12px; border-width: 1px;">
             
                 <h3 style="margin: 18px 0px 18px 26px;">WiFi Settings</h3>
                 <p id="tip1" style="font-size:14px; margin: 0px 26px 18px 26px; color:#6e9cd1;"></p>
@@ -446,7 +446,7 @@ width: 100%;
         </form>
 
             <!--  ⌚  NTP SERVER FORM ⌚ -->
-            <div class="ntp_form" style="background-color:#1a1a1a; text-align: left; margin-top: 6px;border-style:solid; border-color: #3c3e3f;border-radius: 12px; border-width: 1px;">     
+            <div id="ntp_section" class="ntp_form" style="background-color:#1a1a1a; text-align: left; margin-top: 6px;border-style:solid; border-color: #3c3e3f;border-radius: 12px; border-width: 1px;">     
              <!--   <h3 style="margin: 18px 0px 18px 26px;">Timezone</h3>
                 <label style="margin-left: 26px;" for="tz">Select timezone</label>
                 <select id="tz" style="width: 275px; margin: 0px 0px 0px 20px; color: #bec1c4;
@@ -489,7 +489,7 @@ width: 100%;
                 </button>
             </div>
 
-                <div class="brightness_form" style="background-color:#1a1a1a;text-align: left; margin-top: 6px;border-style:solid; border-color: #3c3e3f;border-radius: 12px; border-width: 1px;">     
+                <div id="display_section" class="brightness_form" style="background-color:#1a1a1a;text-align: left; margin-top: 6px;border-style:solid; border-color: #3c3e3f;border-radius: 12px; border-width: 1px;">     
                     <h3 style="margin:18px 10px 0px 26px;">Display Settings</h3>
 
                      <label style="display: flex; align-items: center; ">
@@ -524,7 +524,7 @@ width: 100%;
                     </span>
                 </div>
 
-                <div class="othersettings_form" style="background-color:#1a1a1a;text-align: left; margin-top: 6px;border-style:solid; border-color: #3c3e3f;border-radius: 12px; border-width: 1px;">     
+                <div id="config_section" class="othersettings_form" style="background-color:#1a1a1a;text-align: left; margin-top: 6px;border-style:solid; border-color: #3c3e3f;border-radius: 12px; border-width: 1px;">     
                     <h3 style="margin:18px 10px 8px 26px;">Configuration</h3>
                     <p style="font-size: 16px; margin:0px 0px 4px 26px;">Configuration data</p>
                     <div class="two_buttons">
@@ -571,7 +571,12 @@ width: 100%;
 
 <script>
     let network_list;
-    
+    let ap_ssid = "";
+
+    const wifi_section = document.getElementById("wifi_section");
+    const ntp_section = document.getElementById("ntp_section");
+    const display_section = document.getElementById("display_section");
+    const config_section = document.getElementById("config_section");
     function networkFetch(json_path_or_route){
         
             fetch(json_path_or_route)
@@ -703,63 +708,64 @@ width: 100%;
     window.onload = function () {        
         //networkFetch("/scan");        
 
-        //if ESP is already connected, setup page is loaded with wifi settings greyed-out and disabled    
+        //check device mode and update UI accordingly
         fetch("/uicheck")
             .then(data=> data.json())
             .then(data=> {
 
-            br_tag.innerText = data.bright; //display brightness value
-            slider.value = data.bright;     //update slider with current brightness
-                                     
-            if(data.conn === true){
+            if(data.ap_ssid) ap_ssid = data.ap_ssid;
 
-                disable_button(connect_but, "#52885d");
-                connect_but.innerHTML = "CONNECTED";
-                disable_refresh_but();
-                enable_button(update_but, "#267bbc");
-            }
-            else{
-                networkFetch("/scan");    
-            }
+            //show/hide sections based on setup_mode
+            if(data.setup_mode){
+                //setup mode: show only WiFi section
+                ntp_section.style.display = "none";
+                display_section.style.display = "none";
+                config_section.style.display = "none";
+                networkFetch("/scan");
+            } else {
+                //normal mode: hide WiFi section
+                wifi_section.style.display = "none";
 
-            if(data.br_auto ===true){
-                slider.setAttribute("disabled", "");
-                bright_auto.setAttribute("checked", "");
-            }
+                br_tag.innerText = data.bright;
+                slider.value = data.bright;
 
-            if(data.ntp){
-                document.getElementById("ntp_id").value = data.ntp;
-            }
-
-            if(data.tz){
-                const tz_select = document.getElementById("tz_select");
-                const has_option = Array.from(tz_select.options).some(option => option.value === data.tz);
-                if(has_option){
-                    tz_select.value = data.tz;
+                if(data.br_auto === true){
+                    slider.setAttribute("disabled", "");
+                    bright_auto.setAttribute("checked", "");
                 }
-            }
 
-            if(data.blink === false){
-                blink.removeAttribute("checked", "");
+                if(data.ntp){
+                    document.getElementById("ntp_id").value = data.ntp;
+                }
 
-            }
+                if(data.tz){
+                    const tz_select = document.getElementById("tz_select");
+                    const has_option = Array.from(tz_select.options).some(option => option.value === data.tz);
+                    if(has_option){
+                        tz_select.value = data.tz;
+                    }
+                }
 
-            if(data.twelve=== true){
-                twelve.setAttribute("checked", "");
-            }
+                if(data.blink === false){
+                    blink.removeAttribute("checked", "");
+                }
 
-            msToUptime(data.millis, data.msovfl);  
-            if(data.config===0){
-                //console.log("config NOT exists");
-                disable_button(deleteconf, "#1a1a1a","#9c9c9c", "#4E4E56");
-                enable_button(saveconf, "#1440616e", "#51A0DB", "#51A0DB");
-                saveconf.innerText = "SAVE";
-            }
+                if(data.twelve === true){
+                    twelve.setAttribute("checked", "");
+                }
 
-            else if(data.config===1){
-                saveconf.innerText = "UPDATE";
-                enable_button(saveconf, "#1440616e", "#51A0DB", "#51A0DB");
-                enable_button(deleteconf, "#740c0c45", "#BA1E16", "#BA1E16");
+                if(data.config===0){
+                    disable_button(deleteconf, "#1a1a1a","#9c9c9c", "#4E4E56");
+                    enable_button(saveconf, "#1440616e", "#51A0DB", "#51A0DB");
+                    saveconf.innerText = "SAVE";
+                }
+                else if(data.config===1){
+                    saveconf.innerText = "UPDATE";
+                    enable_button(saveconf, "#1440616e", "#51A0DB", "#51A0DB");
+                    enable_button(deleteconf, "#740c0c45", "#BA1E16", "#BA1E16");
+                }
+
+                enable_button(update_but, "#267bbc");
             }
         });
         
@@ -850,24 +856,20 @@ width: 100%;
                                 console.log("data.stat:", data.stat);
 
                                 if(data.stat==="ok" ){
-                                    //console.log("timer_deleted!");
                                     clearInterval(interval_obj);
 
                                     connected = true;
-                                    //console.log("CONNECTED! - should SHOW POPUP");
 
                                     clearInterval(asciivar);
                                     connect_but.innerHTML = "CONNECTED";
                                     connect_but.style.backgroundColor ="#52885d";
 
-                                    popup_span_elem.innerHTML = "CONNECTED✅";
+                                    popup_span_elem.innerHTML = "CONNECTED ✅<br>IP: <strong>" + data.ip + "</strong><br>Available at: <strong>" + data.mdns + ".local</strong><br>Reconnect to your WiFi network to access settings.";
                                     popup_span_elem.classList.add("show");
-
-                                    enable_button(update_but, "#267bbc");
 
                                     setTimeout(()=>{
                                         popup_span_elem.classList.remove("show");
-                                    }, 4900);     //popup fades out after 4900ms
+                                    }, 60000);     //long timeout so user can read IP/mDNS
                             }
                                 
                                 else if(data.stat==="fail" ){
@@ -1081,22 +1083,21 @@ for (i = 0; i < coll.length; i++) {
                     body: JSON.stringify({"save": ((this.value == 1) ? true : false)}) //sends the value of the button that calls the function 
                 })
 
-                //if user deleted config, then only saveconf button must be enabled
+                //config deleted: switch to setup mode UI
                 if(this.value == 0){    
 
-                    enable_button(saveconf, "#1440616e", "#51A0DB", "#51A0DB");
-                    disable_button(update_but, "#627D9E");
-                    saveconf.innerText = "SAVE";
+                    //show WiFi section, hide settings sections
+                    wifi_section.style.display = "";
+                    ntp_section.style.display = "none";
+                    display_section.style.display = "none";
+                    config_section.style.display = "none";
 
-                    enable_button(connect_but, "#9a031e");
-                    connect_but.innerText = "CONNECT";
-                    
-                    refresh_but.removeAttribute("disabled");
-                    refresh_but.style.cursor = "pointer";
-                    document.querySelectorAll("path")[0].style.fill="#dee2e6";
+                    popup_span_elem.innerHTML = "Config deleted. Connect to '" + ap_ssid + "' WiFi to reconfigure.";
+                    popup_span_elem.classList.add("show");
+                    setTimeout(()=>{ popup_span_elem.classList.remove("show"); }, 8000);
                 }
 
-                else{ //if user saves config, deleteconf button is enabled
+                else{ //config saved/updated
                     saveconf.innerText = "SAVED"; 
 
                     enable_button(deleteconf, "#740c0c45", "#BA1E16", "#BA1E16");

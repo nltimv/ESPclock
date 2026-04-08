@@ -43,6 +43,10 @@ const char *esp_password =  "waltwhite64"; //AP pw must be at least 8 chars, oth
 bool newScan = false; //if true, ESP scans for networks again and overrides the previous networks on net_list
 uint8_t attempts = 0; //connection attempts --> when it's set to 0 again, it means pw is wrong
 
+bool setup_mode = true;           //true = no config saved yet (setup mode); false = normal mode
+unsigned long ap_shutdown_start = 0; //millis() snapshot when AP shutdown was scheduled
+bool ap_shutdown_pending = false; //true = AP shutdown timer is active
+
 AsyncWebServer server(80);
 
 //TM1637 DISPLAY SETUP
@@ -300,13 +304,18 @@ void checkConfig(void){
 
         attempts=0;
         connected=true;
+        setup_mode=false;
         Serial.println("WIFI RESTORED");
 
-        start_NtpClient=true;
-        ntp_addr= strdup(load_cf["ntp_ad"]); 
-        gmt_offset = load_cf["offset"];   
-        
-        configTime(gmt_offset*3600, 3600, ntp_addr);
+        if(load_cf["ntp_ad"].is<const char*>()){
+          ntp_addr = strdup(load_cf["ntp_ad"]);
+          gmt_offset = load_cf["offset"];
+          configTime(gmt_offset*3600, 3600, ntp_addr);
+          start_NtpClient=true;
+        }
+        else{
+          start_NtpClient=false;
+        }
   
         brightness = (uint8_t)load_cf["br"];
         mydisplay.setBrightness(brightness);
@@ -377,15 +386,10 @@ void setup() {
     wifiScan();
   }
   
-  //---------------------------------------------x
-  //PHASE 2: here user choose its ssid and enters pw
-  
-  //Serial.println("PHASE 2: Configuring AP");  
-  WiFi.softAP(esp_ssid, esp_password, false, 2);     //Starting AP on given credential
-
-  //Serial.print("AP IP address: ");  🟠
-  //Serial.println(WiFi.softAPIP());  🟠           //Default AP-IP is 192.168.4.1
-  //Serial.println(esp_ssid);         🟠
+  //PHASE 2: start AP only in setup mode (no saved config)
+  if(!connected){
+    WiFi.softAP(esp_ssid, esp_password, false, 2);     //Starting AP on given credential
+  }
 
   //Route for root index.html
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){ 
@@ -406,6 +410,8 @@ void setup() {
     uicheck_json["config"] = (LittleFS.exists("/config.json")) ? 1 : 0;
     uicheck_json["millis"] = millis();
     uicheck_json["msovfl"] = ms_ovfl;
+    uicheck_json["setup_mode"] = setup_mode;
+    uicheck_json["ap_ssid"] = esp_ssid;
 
 
     String uc_str;
@@ -487,7 +493,9 @@ void setup() {
       if(WiFi.status() == WL_CONNECTED){
         //attempts=0;
         Serial.println(password);
-        request->send(200, "application/json", "{\"stat\":\"ok\"}");
+        String ip = WiFi.localIP().toString();
+        String resp = "{\"stat\":\"ok\",\"ip\":\"" + ip + "\",\"mdns\":\"espclock\"}";
+        request->send(200, "application/json", resp);
       }
 
       else{
@@ -594,13 +602,13 @@ void setup() {
     bool saveconfig = scf_json["save"];
     //Serial.println(saveconfig);
 
-    if((!LittleFS.exists("/config.json") && saveconfig==1)){ //user wants to save config
+    if(saveconfig==1){ //user wants to save/update config
               
       JsonDocument config;
 
       config[F("ssid")] = ssid;           //const *char
       config[F("pw")] = password;         //const *char
-      config[F("ntp_ad")] = ntp_addr;     //const *char
+      if(ntp_addr) config[F("ntp_ad")] = ntp_addr;  //const *char
       config[F("offset")] = gmt_offset;   //offset saved as int
       config[F("br_auto")] = br_auto;     //bool as 1 or 0
       config[F("br")] = brightness;       //uint8_t
@@ -626,7 +634,10 @@ void setup() {
       creds_available = false;
       start_NtpClient=false;
       attempts=0;
-      Serial.println(password);
+      setup_mode=true;
+      ap_shutdown_pending=false;
+      WiFi.mode(WIFI_AP_STA);
+      WiFi.softAP(esp_ssid, esp_password, false, 2);
       Serial.println(F("\n*Config.json DELETED*"));
     }
 
@@ -654,6 +665,12 @@ void loop() {
   
   if(millis() == 4294967295){
     ms_ovfl++;  //can lead to a bug because uint8_t max value is 255, but it'll reach this value after 50days*256= 35years of activity
+  }
+
+  //shut down AP after setup mode transition (15 second grace period for user to read IP/mDNS)
+  if(ap_shutdown_pending && (millis() - ap_shutdown_start) >= 15000UL){
+    WiFi.mode(WIFI_STA);
+    ap_shutdown_pending = false;
   }
 
   if(newScan==true){
@@ -784,9 +801,26 @@ void loop() {
     
       //once connected, exit form while(1) with break, and then from first if since "connected==true" now
       else if(WiFi.status() == WL_CONNECTED){
-        //configTime(gmt_offset*3600, 3600, ntp_addr);
         connected = true;
         initMDNS();
+
+        //first-time setup: auto-save WiFi credentials and schedule AP shutdown
+        if(setup_mode){
+          JsonDocument config;
+          config[F("ssid")] = ssid;
+          config[F("pw")] = password;
+          config[F("br_auto")] = br_auto;
+          config[F("br")] = brightness;
+          config[F("blink")] = blink;
+          config[F("twelve")] = twelve;
+          config.shrinkToFit();
+          File fc = LittleFS.open("/config.json", "w+");
+          serializeJsonPretty(config, fc);
+          fc.close();
+          setup_mode = false;
+          ap_shutdown_start = millis();
+          ap_shutdown_pending = true;
+        }
         break;
       }
 
