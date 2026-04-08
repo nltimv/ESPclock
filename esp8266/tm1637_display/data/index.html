@@ -408,6 +408,7 @@ width: 100%;
         <form id="wifi_section" style=" background-color: #1a1a1a; text-align: left;border-style:solid; border-color:#3c3e3f;border-radius: 12px; border-width: 1px;">
             
                 <h3 style="margin: 18px 0px 18px 26px;">WiFi Settings</h3>
+                <div id="wifi_fields">
                 <p id="tip1" style="font-size:14px; margin: 0px 26px 18px 26px; color:#6e9cd1;"></p>
                 <label style="margin-left: 26px;" for="ssid_list">Available networks</label>
                    <div class="ssid_wrapper">
@@ -442,6 +443,10 @@ width: 100%;
                     </button>
                     <span class="popuptext" style="font-size: 14px; user-select: none;" id="myPopup"></span>
                 </div>
+                </div>
+                </div><!--end wifi_fields-->
+                <div id="wifi_connected_msg" style="display:none; padding: 26px 26px 26px 26px; text-align: center; line-height: 1.8;">
+                    <p id="wifi_connected_text" style="font-size: 16px; color: #dee2e6; margin: 0;"></p>
                 </div>
         </form>
 
@@ -796,6 +801,9 @@ width: 100%;
     const useshift = document.getElementById("useopen");
 
     const popup_span_elem = document.getElementById("myPopup");   //for popup message
+    const wifi_fields = document.getElementById("wifi_fields");
+    const wifi_connected_msg = document.getElementById("wifi_connected_msg");
+    const wifi_connected_text = document.getElementById("wifi_connected_text");
 
       //password toggle
       buttoneye.onclick = function(){
@@ -861,15 +869,10 @@ width: 100%;
                                     connected = true;
 
                                     clearInterval(asciivar);
-                                    connect_but.innerHTML = "CONNECTED";
-                                    connect_but.style.backgroundColor ="#52885d";
 
-                                    popup_span_elem.innerHTML = "CONNECTED ✅<br>IP: <strong>" + data.ip + "</strong><br>Available at: <strong>" + data.mdns + ".local</strong><br>Reconnect to your WiFi network to access settings.";
-                                    popup_span_elem.classList.add("show");
-
-                                    setTimeout(()=>{
-                                        popup_span_elem.classList.remove("show");
-                                    }, 15000);     //matches AP shutdown grace period
+                                    wifi_fields.style.display = "none";
+                                    wifi_connected_text.innerHTML = "✅ Connected!<br><br>IP: <strong>" + data.ip + "</strong><br>Available at: <strong>" + data.mdns + ".local</strong><br><br>Reconnect to your Wi-Fi network to access settings.";
+                                    wifi_connected_msg.style.display = "";
                             }
                                 
                                 else if(data.stat==="fail" ){
@@ -1091,6 +1094,9 @@ for (i = 0; i < coll.length; i++) {
                     ntp_section.style.display = "none";
                     display_section.style.display = "none";
                     config_section.style.display = "none";
+
+                    wifi_connected_msg.style.display = "none";
+                    wifi_fields.style.display = "";
 
                     popup_span_elem.innerHTML = "Config deleted. Connect to '" + ap_ssid + "' WiFi to reconfigure.";
                     popup_span_elem.classList.add("show");
