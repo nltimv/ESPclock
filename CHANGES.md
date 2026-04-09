@@ -8,6 +8,27 @@ The following changes have been made in this fork by
 
 ---
 
+## 2026-04-09
+
+### ESP8266 TM1637 firmware — code split (`esp8266/tm1637_display/src/`)
+- Split the single monolithic `espclock8266.cpp` into five logical modules:
+  - `display.h` / `display.cpp` — TM1637 hardware object, segment constants,
+    `myTimer()`, `displayAnim()`, and all display-state globals.
+  - `wifi_manager.h` / `wifi_manager.cpp` — WiFi scan, mDNS initialisation,
+    `checkConfig()`, device-identity constants, and WiFi/setup-mode globals.
+  - `web_server.h` / `web_server.cpp` — `AsyncWebServer` object and all HTTP
+    route handlers, factored into a single `setupRoutes()` function.
+  - `ntp.h` — shared `extern` declarations for the NTP/time-state variables.
+  - `json_config.h` — ArduinoJson compile-time optimisation macros and single
+    include point for `ArduinoJson.h`.
+  - `espclock8266.cpp` (slimmed down) — NTP globals, `setup()`, and `loop()`.
+- Simplified the time-display logic in `loop()` (eliminated duplicated
+  branch arms for the 12-hr / blink combination).
+- Made animation-state variables (`px`, `forw`, `SEG_WAIT`) `static` and
+  local to `display.cpp`.
+
+---
+
 ## 2026-04-08
 
 ### All firmware variants (`esp32/tm1637_display`, `esp32/tm1652_display`, `esp8266/tm1637_display`)
