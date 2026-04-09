@@ -113,9 +113,10 @@ void loop() {
 
             // Render the current time
             if (blink) {
-                // Compute the displayed hour (12-hr conversion when needed)
-                int dispHour = timeinfo.tm_hour;
-                if (twelve && dispHour > 12) dispHour -= 12;
+                // Compute the displayed hour with correct 12-hr conversion:
+                //   0  → 12 (midnight), 1-12 → 1-12, 13-23 → 1-11
+                int dispHour = twelve ? (timeinfo.tm_hour % 12 == 0 ? 12 : timeinfo.tm_hour % 12)
+                                      : timeinfo.tm_hour;
 
                 uint8_t colonMask = colon ? 0b01000000 : 0;
                 mydisplay.showNumberDecEx(dispHour,         colonMask, false, 2, 0);

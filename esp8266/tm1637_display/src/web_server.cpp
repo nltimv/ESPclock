@@ -193,19 +193,19 @@ void setupRoutes() {
             deserializeJson(br_auto_json, data);
             br_auto = br_auto_json["br"];
 
-            if (timeinfo.tm_hour >= 0 && timeinfo.tm_hour < 9) {
+            if (timeinfo.tm_hour < 9) {
                 brightness = 0;
                 mydisplay.setBrightness(0);
                 request->send(200, "application/json", "{\"status\":\"0\"}");
-            } else if (timeinfo.tm_hour >= 7 && timeinfo.tm_hour < 17) {
+            } else if (timeinfo.tm_hour < 17) {
                 brightness = 6;
                 mydisplay.setBrightness(6);
                 request->send(200, "application/json", "{\"status\":\"6\"}");
-            } else if (timeinfo.tm_hour >= 17 && timeinfo.tm_hour < 20) {
+            } else if (timeinfo.tm_hour < 20) {
                 brightness = 3;
                 mydisplay.setBrightness(3);
                 request->send(200, "application/json", "{\"status\":\"3\"}");
-            } else if (timeinfo.tm_hour >= 20) {
+            } else {
                 brightness = 2;
                 mydisplay.setBrightness(2);
                 request->send(200, "application/json", "{\"status\":\"2\"}");
