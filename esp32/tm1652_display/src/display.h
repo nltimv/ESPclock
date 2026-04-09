@@ -1,4 +1,4 @@
-// ESPclock - TM1637 display management (ESP8266, GPIO5/GPIO4)
+// ESPclock - TM1652 display management (ESP32, GPIO6/GPIO4)
 // This file is part of the ESPclock project fork by nltimv.
 // Originally written by telepath9 (https://github.com/telepath9/ESPclock)
 // Licensed under the GNU General Public License v3.0 (GPL-3.0)
@@ -10,11 +10,9 @@
 
 // Include the shared abstract display API (globals + function prototypes)
 #include "display_api.h"
-#include "TM1637Display.h"
+#include <TM1652.h>
+#include <TM16xxDisplay.h>
 
-// TM1637 pin assignments (ESP8266 D1/D2)
-#define CLK 5   // D1 — GPIO5
-#define DIO 4   // D2 — GPIO4
-
-// TM1637 hardware object
-extern TM1637Display mydisplay;
+// TM1652 hardware objects
+extern TM1652       module;   // low-level chip driver
+extern TM16xxDisplay display; // higher-level display helper

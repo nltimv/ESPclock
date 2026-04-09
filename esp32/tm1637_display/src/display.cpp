@@ -1,4 +1,4 @@
-// ESPclock - TM1637 display management (ESP8266, GPIO5/GPIO4)
+// ESPclock - TM1637 display management (ESP32, GPIO9/GPIO10)
 // This file is part of the ESPclock project fork by nltimv.
 // Originally written by telepath9 (https://github.com/telepath9/ESPclock)
 // Licensed under the GNU General Public License v3.0 (GPL-3.0)
@@ -32,9 +32,9 @@ static const uint8_t SEG_Err[] = {
 };
 
 // ── Animation state (private to this translation unit) ────────────────────
-static uint8_t       px       = 4;        // current dot position
+static uint8_t       px         = 4;
 static const uint8_t SEG_WAIT[] = { SEG_G };
-static bool          forw     = true;     // true = moving right→left
+static bool          forw       = true;   // true = moving right→left
 
 // ── Non-blocking timer ─────────────────────────────────────────────────────
 unsigned long myTimer(unsigned long everywhen) {

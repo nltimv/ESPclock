@@ -10,6 +10,36 @@ The following changes have been made in this fork by
 
 ## 2026-04-09
 
+### Shared firmware library and ESP32 code merge (`lib/espclock_common/`, `esp32/`)
+- Created a shared PlatformIO library `lib/espclock_common/` containing all code
+  that is identical across ESP8266 and ESP32 variants:
+  - `display_api.h` — abstract display interface (function prototypes and state
+    globals) that every platform-specific `display.cpp` must implement.
+  - `wifi_manager.h` / `wifi_manager.cpp` — WiFi scan (RSSI-sorted,
+    de-duplicated), mDNS, `checkConfig()`, and WiFi/setup-mode globals.
+    Uses `#ifdef ESP8266` / `#else` guards for platform-specific includes.
+  - `web_server.h` / `web_server.cpp` — `AsyncWebServer` object and all HTTP
+    route handlers; calls `displaySetBrightness()` via the display abstraction.
+  - `ntp.h` — shared `extern` declarations for NTP/time-state variables.
+  - `json_config.h` — ArduinoJson compile-time optimisation macros.
+- Introduced a display abstraction layer (`displayInit`, `displayClear`,
+  `displayShowError`, `displayShowTrying`, `displayShowAttempt`,
+  `displaySetBrightness`, `displayShowTime`, `displayAnim`), implemented
+  independently in each variant's `display.cpp`.
+- Upgraded ESP32 firmware to match ESP8266 feature set:
+  - Switched from GMT-offset-based NTP to POSIX timezone strings (`configTzTime`).
+  - Added `DEVICE_ID`-based AP SSID and mDNS hostname.
+  - Upgraded WiFi scan to the RSSI-sorted, duplicate-filtered algorithm.
+  - Added `/setup_timezone` endpoint (defers AP shutdown until timezone is set).
+  - Updated `/updatetime` to accept POSIX `tz` string instead of `offset` int.
+  - Updated `/uicheck` to return `ntp` and `tz` fields.
+  - Updated `/config` to preserve existing WiFi credentials in normal mode.
+  - Updated config.json schema: stores `tz` (POSIX string) instead of `offset` (int).
+  - Removed unused `/alarm` placeholder and `/uptime` endpoints.
+- Gave both ESP32 variants their own PlatformIO project structure with
+  `platformio.ini`, `src/`, and `data/` directories.
+- Shared the feature-complete web UI (ESP8266 HTML) with both ESP32 variants.
+
 ### ESP8266 TM1637 firmware — code split (`esp8266/tm1637_display/src/`)
 - Split the single monolithic `espclock8266.cpp` into five logical modules:
   - `display.h` / `display.cpp` — TM1637 hardware object, segment constants,

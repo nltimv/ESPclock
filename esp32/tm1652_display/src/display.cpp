@@ -1,4 +1,4 @@
-// ESPclock - TM1637 display management (ESP8266, GPIO5/GPIO4)
+// ESPclock - TM1652 display management (ESP32, GPIO6/GPIO4)
 // This file is part of the ESPclock project fork by nltimv.
 // Originally written by telepath9 (https://github.com/telepath9/ESPclock)
 // Licensed under the GNU General Public License v3.0 (GPL-3.0)
@@ -8,8 +8,11 @@
 
 #include "display.h"
 
-// ── Hardware object ────────────────────────────────────────────────────────
-TM1637Display mydisplay(CLK, DIO);
+// ── Hardware objects ───────────────────────────────────────────────────────
+// module(GPIOpin, n_digits): low-level TM1652 driver
+TM1652       module(6, 4);
+// display(&module, n_digits): higher-level helper for number/string output
+TM16xxDisplay display(&module, 4);
 
 // ── Display-state globals ──────────────────────────────────────────────────
 bool    colon      = true;
@@ -18,23 +21,9 @@ bool    br_auto    = false;
 bool    twelve     = false;
 uint8_t brightness = 7;
 
-// ── Fixed segment patterns ─────────────────────────────────────────────────
-static const uint8_t SEG_try[] = {
-    SEG_D | SEG_E | SEG_F | SEG_G,               // t
-    SEG_E | SEG_G,                                // r
-    SEG_B | SEG_C | SEG_D | SEG_F | SEG_G        // Y
-};
-
-static const uint8_t SEG_Err[] = {
-    SEG_A | SEG_D | SEG_E | SEG_F | SEG_G,       // E
-    SEG_E | SEG_G,                                // r
-    SEG_E | SEG_G                                 // r
-};
-
 // ── Animation state (private to this translation unit) ────────────────────
-static uint8_t       px       = 4;        // current dot position
-static const uint8_t SEG_WAIT[] = { SEG_G };
-static bool          forw     = true;     // true = moving right→left
+static uint8_t px   = 4;
+static bool    forw = true;   // true = moving right→left
 
 // ── Non-blocking timer ─────────────────────────────────────────────────────
 unsigned long myTimer(unsigned long everywhen) {
@@ -51,50 +40,53 @@ unsigned long myTimer(unsigned long everywhen) {
 // ── Display abstraction implementation ────────────────────────────────────
 
 void displayInit() {
-    mydisplay.setBrightness(7);
-    mydisplay.clear();
+    // begin(enabled, brightness 0-7, frequency selector 0-7)
+    module.begin(true, 4, 6);
+    display.clear();
 }
 
 void displayClear() {
-    mydisplay.clear();
+    display.clear();
 }
 
 void displayShowError(uint8_t code) {
-    mydisplay.setSegments(SEG_Err, 3, 0);
-    mydisplay.showNumberDec(code, false, 1, 3);
+    display.setDisplayToString("Err", 0, 0);
+    module.setDisplayDigit(code, 3, false);
 }
 
 void displayShowTrying() {
-    mydisplay.setSegments(SEG_try, 3, 0);
+    display.setDisplayToString("trY", 0, 0);
 }
 
 void displayShowAttempt(uint8_t n) {
-    mydisplay.showNumberDec(n, true, 1, 3);
+    module.setDisplayDigit(n, 3, false);
 }
 
 void displaySetBrightness(uint8_t br) {
-    mydisplay.setBrightness(br);
+    module.setupDisplay(true, br, 6);
 }
 
 void displayShowTime(int hour, int minute, bool colonOn, bool twelveHr) {
     // Correct 12-hr conversion: 0→12, 1-12→1-12, 13-23→1-11
     int dispHour = twelveHr ? (hour % 12 == 0 ? 12 : hour % 12) : hour;
-    uint8_t colonMask = colonOn ? 0b01000000 : 0;
-    mydisplay.showNumberDecEx(dispHour, colonMask, false, 2, 0);
-    mydisplay.showNumberDecEx(minute,   colonMask, true,  2, 2);
+    int timeVal  = dispHour * 100 + minute;
+
+    // TM16xx: bit 2 (0x04) of the dot-mask controls the colon between digits 1 and 2
+    uint8_t dotMask = colonOn ? 0x04 : 0x00;
+    display.setDisplayToDecNumber(timeVal, dotMask, true);
 }
 
 // ── Animation ─────────────────────────────────────────────────────────────
 void displayAnim() {
     if (myTimer(500)) {
         if (forw) {                         // sweep 4 → 0
-            mydisplay.clear();
-            mydisplay.setSegments(SEG_WAIT, 1, px);
+            display.clear();
+            module.setSegments(0x40, px);   // 0x40 = SEG_G (middle bar)
             --px;
             if (px == 0) forw = false;
         } else {                            // sweep 0 → 3
-            mydisplay.clear();
-            mydisplay.setSegments(SEG_WAIT, 1, px);
+            display.clear();
+            module.setSegments(0x40, px);
             ++px;
             if (px == 3) forw = true;
         }

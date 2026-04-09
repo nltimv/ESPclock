@@ -8,11 +8,16 @@
 
 #include "web_server.h"
 #include "wifi_manager.h"
-#include "display.h"
+#include "display_api.h"
 #include "ntp.h"
 #include "json_config.h"
 
+#ifdef ESP8266
 #include <ESP8266WiFi.h>
+#else  // ESP32
+#include <WiFi.h>
+#endif
+
 #include <LittleFS.h>
 
 // ── Server object ──────────────────────────────────────────────────────────
@@ -71,9 +76,9 @@ void setupRoutes() {
         [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
             JsonDocument thebody;
             deserializeJson(thebody, data);
-            ssid             = strdup(thebody["ssid"]);
-            password         = strdup(thebody["pw"]);
-            creds_available  = true;
+            ssid            = strdup(thebody["ssid"]);
+            password        = strdup(thebody["pw"]);
+            creds_available = true;
             request->send(200, "application/json", "{\"creds\":\"OK\"}");
         }
     );
@@ -179,7 +184,7 @@ void setupRoutes() {
             JsonDocument bgt_json;
             deserializeJson(bgt_json, data);
             brightness = (uint8_t)atoi(bgt_json["bgt"]);
-            mydisplay.setBrightness(brightness);
+            displaySetBrightness(brightness);
             request->send(200, "application/json", "{\"status\":\"BGT OK\"}");
         }
     );
@@ -195,19 +200,19 @@ void setupRoutes() {
 
             if (timeinfo.tm_hour < 9) {
                 brightness = 0;
-                mydisplay.setBrightness(0);
+                displaySetBrightness(0);
                 request->send(200, "application/json", "{\"status\":\"0\"}");
             } else if (timeinfo.tm_hour < 17) {
                 brightness = 6;
-                mydisplay.setBrightness(6);
+                displaySetBrightness(6);
                 request->send(200, "application/json", "{\"status\":\"6\"}");
             } else if (timeinfo.tm_hour < 20) {
                 brightness = 3;
-                mydisplay.setBrightness(3);
+                displaySetBrightness(3);
                 request->send(200, "application/json", "{\"status\":\"3\"}");
             } else {
                 brightness = 2;
-                mydisplay.setBrightness(2);
+                displaySetBrightness(2);
                 request->send(200, "application/json", "{\"status\":\"2\"}");
             }
         }

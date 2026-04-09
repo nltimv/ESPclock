@@ -7,13 +7,19 @@
 // This file has been modified by nltimv (https://github.com/nltimv).
 
 #include "wifi_manager.h"
-#include "display.h"
+#include "display_api.h"
 #include "ntp.h"
 #include "json_config.h"
 
+#ifdef ESP8266
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
 #include <ESP8266mDNS.h>
+#else  // ESP32
+#include <WiFi.h>
+#include <ESPmDNS.h>
+#endif
+
 #include <FS.h>
 #include <LittleFS.h>
 
@@ -51,8 +57,8 @@ void wifiScan() {
     bool *used = new bool[n]();
 
     for (byte picked = 0; picked < n; picked++) {
-        int    bestIndex = -1;
-        int32_t bestRssi = -1000;
+        int     bestIndex = -1;
+        int32_t bestRssi  = -1000;
 
         for (byte i = 0; i < n; i++) {
             if (used[i]) continue;
@@ -129,11 +135,11 @@ void checkConfig() {
 
     while (WiFi.status() != WL_CONNECTED) {
         delay(100);
-        mydisplay.setSegments(SEG_try, 3, 0);
+        displayShowTrying();
 
         if (myTimer(3000)) {
             ++attempts;
-            mydisplay.showNumberDec(attempts, true, 1, 3);
+            displayShowAttempt(attempts);
         } else if (attempts == 4) {
             attempts        = 0;
             creds_available = false;
@@ -161,7 +167,7 @@ void checkConfig() {
         }
 
         brightness = (uint8_t)load_cf["br"];
-        mydisplay.setBrightness(brightness);
+        displaySetBrightness(brightness);
         blink   = load_cf[F("blink")];
         br_auto = load_cf[F("br_auto")];
         twelve  = load_cf[F("twelve")];

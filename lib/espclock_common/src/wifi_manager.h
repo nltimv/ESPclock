@@ -16,9 +16,9 @@
 #define DEVICE_ID "0000"
 #endif
 
-extern const char *esp_ssid;       // AP SSID  ("ESPclock-<DEVICE_ID>")
-extern const char *mdns_name;      // mDNS name ("espclock-<DEVICE_ID>")
-extern const char *esp_password;   // AP password
+extern const char *esp_ssid;      // AP SSID  ("ESPclock-<DEVICE_ID>")
+extern const char *mdns_name;     // mDNS name ("espclock-<DEVICE_ID>")
+extern const char *esp_password;  // AP password
 
 // ── WiFi credential state ──────────────────────────────────────────────────
 extern const char *ssid;
@@ -27,11 +27,11 @@ extern bool creds_available;
 extern bool connected;
 
 // ── Setup / reconnection state ─────────────────────────────────────────────
-extern bool    newScan;              // request a fresh network scan in loop()
-extern uint8_t attempts;            // consecutive connection-attempt counter
-extern bool    setup_mode;          // true = no config saved yet
-extern unsigned long ap_shutdown_start;   // millis() snapshot for AP grace period
-extern bool    ap_shutdown_pending;       // true = AP shutdown timer is active
+extern bool          newScan;             // request a fresh network scan in loop()
+extern uint8_t       attempts;           // consecutive connection-attempt counter
+extern bool          setup_mode;         // true = no config saved yet
+extern unsigned long ap_shutdown_start;  // millis() snapshot for AP grace period
+extern bool          ap_shutdown_pending; // true = AP shutdown timer is active
 
 // ── Functions ──────────────────────────────────────────────────────────────
 

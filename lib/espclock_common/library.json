@@ -1,0 +1,9 @@
+{
+    "name": "espclock_common",
+    "version": "1.0.0",
+    "description": "Shared WiFi, web-server, and NTP code for ESPclock firmware variants",
+    "keywords": ["espclock", "wifi", "ntp"],
+    "license": "GPL-3.0-or-later",
+    "frameworks": ["arduino"],
+    "platforms": ["espressif8266", "espressif32"]
+}

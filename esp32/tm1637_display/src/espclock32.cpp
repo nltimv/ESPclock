@@ -1,852 +1,153 @@
-// ESPclock - ESP32 TM1637 display firmware
+// ESPclock - ESP32 TM1637 display firmware (main entry point)
+// This file is part of the ESPclock project fork by nltimv.
 // Originally written by telepath9 (https://github.com/telepath9/ESPclock)
 // Licensed under the GNU General Public License v3.0 (GPL-3.0)
+// SPDX-License-Identifier: GPL-3.0-or-later
 //
 // This file has been modified by nltimv (https://github.com/nltimv).
-// Date of modification: 2026-04-06
-// Changes:
-//   - Added setup_mode flag and automatic AP shutdown after first-time setup
-//   - AP is only started when no configuration has been saved yet (setup mode)
-//   - Auto-saves WiFi credentials on first successful connection
-//   - Fixed NTP initialisation: skipped when NTP address is absent from config
-//   - Allow re-saving configuration (not just on first save)
-//   - Added IP address and mDNS hostname to timezone-setup JSON response
-//   - Added setup_mode and AP SSID to UI status JSON
-//   2026-04-08: IP/mDNS addresses shown as clickable hyperlinks in setup UI
 
 #include <Arduino.h>
 #include <WiFi.h>
-#include <time.h>
-#include <AsyncTCP.h>
-#include <ESPAsyncWebServer.h>
-#include <WiFiClient.h>
-#include <FS.h>            //for file handling
-#include <LittleFS.h>      //to access to filesystem
-#include <TM1637Display.h>
 #include <ESPmDNS.h>
-#include <ArduinoJson.h>
+#include <LittleFS.h>
 
-//JSON optimizations
-#define ARDUINOJSON_SLOT_ID_SIZE 1
-#define ARDUINOJSON_STRING_LENGTH_SIZE 1
-#define ARDUINOJSON_USE_DOUBLE 0
-#define ARDUINOJSON_USE_LONG_LONG 0
+#include "display.h"
+#include "wifi_manager.h"
+#include "web_server.h"
+#include "ntp.h"
+#include "json_config.h"
 
-//NON-blocking timer function (delay() is EVIL). only accepts milliseconds
-unsigned long myTimer(unsigned long everywhen){ //millis overflow-safe!
+// ── NTP / time globals ─────────────────────────────────────────────────────
+const char *ntp_addr      = "pool.ntp.org";
+const char *tz_posix      = "UTC0";
+bool        start_NtpClient = false;
+struct tm   timeinfo;
 
-        static unsigned long t1, diff_time;
-        bool ret=0;
-        diff_time= millis() - t1;
-          
-        if(diff_time >= everywhen){
-            t1= millis();
-            ret=1;
-        }
-        return ret;
-}
-
-//4294967295 ms == 49d 17h 5m #######################
-
-const char* ssid;
-const char* password;
-bool creds_available=false;
-bool connected=false;   //wifi connection state
-
-const char *esp_ssid = "ESPclock32";
-const char *esp_password =  "waltwhite64"; //AP pw must be at least 8 chars, otherwise AP won't be customized 
-
-bool newScan = false; //if true, ESP scans for networks again and overrides the previous networks on net_list
-uint8_t attempts = 0; //connection attempts --> when it's set to 0 again, it means pw is wrong
-
-bool setup_mode = true;           //true = no config saved yet (setup mode); false = normal mode
-unsigned long ap_shutdown_start = 0; //millis() snapshot when AP shutdown was scheduled
-bool ap_shutdown_pending = false; //true = AP shutdown timer is active
-
-AsyncWebServer server(80);
-
-//TM1637 DISPLAY SETUP
-#define CLK 9  //previously gpio2 ??? why i changed the pins??
-#define DIO 10 //previously gpio3
-
-TM1637Display mydisplay(CLK, DIO);
-bool colon=true;
-bool blink=true;
-bool br_auto=false;
-bool twelve=false;
-uint8_t brightness=7;
-uint8_t ms_ovfl=0;
-
-
-const uint8_t SEG_try[]={
-  SEG_D | SEG_E | SEG_F | SEG_G,  //t
-  SEG_E | SEG_G,                  //r
-  SEG_B | SEG_C | SEG_D | SEG_F | SEG_G  //Y
-};
-
-const uint8_t SEG_Err[]={
-  SEG_A | SEG_D | SEG_E | SEG_F | SEG_G, //E
-  SEG_E | SEG_G, SEG_E | SEG_G          //rr
-};
-
-uint8_t px=4;                   //used by displayAnim()
-const uint8_t SEG_WAIT[] = {     //used by displayAnim()
-	 SEG_G
-};
-
-bool forw = true;               //used by displayAnim()
-
-void displayAnim(void){
-   if(myTimer(500)){
-        if(forw==true){ // 4 -> 0
-            mydisplay.clear();
-            mydisplay.setSegments(SEG_WAIT, 1, px); 
-            --px;          
-
-            if(px==0){
-              forw=false;
-            }
-        }
-
-        else if(forw==false){ //0 -> 4
-
-            mydisplay.clear();
-            mydisplay.setSegments(SEG_WAIT, 1, px); 
-            ++px;          
-
-            if(px==3){
-            forw= true;
-            }
-        }
-  }
-  return;
-}
-
-//NTP SETUP
-struct tm timeinfo;
-/*
-void printLocalTime(){
-    struct tm timeinfo;
-
-    if(!getLocalTime(&timeinfo)){
-      Serial.println("Failed to obtain time 1");
-      return;
-    }
-
-    Serial.println(&timeinfo, "%H:%M:%S zone %Z %z ");
-    //Serial.println(timeinfo.tm_hour); //access to single time vars
-}
-*/
-const char *ntp_addr;
-int gmt_offset;
-bool start_NtpClient = false;
-
-//ALARM setup
-uint8_t hh, mm; //hour and minutes
-
-//all entries are initialized to 0
-bool days[7] = {0};   //in this case mon=days[0], tue=days[1], wed=days[2], thu=days[3], fri=days[4], sat=days[5], sun=days[6]
-
-/*
-arrays are guaranteed to be contiguous.(there's no gap between elements) 
-while structs are not, so it may be that a struct wastes more memory.
-THEN, ARRAY WINS.
-oppure creare un struttura days con dentro i giorni (less confusing to handle than array)
-struct week{
-  bool mon=0;
-  bool tue=0;
-  bool wed=0;
-  bool thu=0;
-  bool fri=0;
-  bool sat=0;
-  bool sun=0;
-}
-*/
-
-uint8_t snooze;
-//uint8_t ringtone;
-
-
-void wifiScan(){
-    //---------------------------------------------x
-    //start wifiSCAN
-    //---------------------------------------------x
-    //Serial.println("PHASE 1.1: scanning in STA_MODE ");
-    WiFi.disconnect();
-
-    byte n = WiFi.scanNetworks();
-    Serial.print(n);
-    Serial.println(" network(s) found. Displaying the first 5");
-
-    //---------------------------------------------x
-    //SSIDs found are stored in json
-    //arduinoJson7 doesn't use static/dynamicJsonDocument anymore, but it uses only JsonDocument
-    //---------------------------------------------x    
-      
-    //If json doesn't exists yet, it creates it
-    if(!LittleFS.exists("/network_list.json")){
-        JsonDocument net_list;
-        //Serial.println("Network list doesn't exists. Creating it now..."); 🟠
-
-        //if the number of networks found is <5 (so from [0-4])...
-        if(n<5){
-            
-            //stores number of found networks in json
-            net_list["found"] = n;
-            JsonArray network = net_list["network"].to<JsonArray>();
-
-            for(byte j = 0; j < n; j++){
-              JsonArray network_n_credentials = network[j]["credentials"].to<JsonArray>();
-              network_n_credentials.add(WiFi.SSID(j));
-              network_n_credentials.add("");
-            }
-        }
-
-        //if it finds >5 networks, it will display only the top five networks, with index: [0-4]
-        else{
-          
-          net_list["found"] = 5;
-          JsonArray network = net_list["network"].to<JsonArray>();
-
-          for(byte j = 0; j < 5; j++){
-              JsonArray network_n_credentials = network[j]["credentials"].to<JsonArray>();
-              network_n_credentials.add(WiFi.SSID(j));
-              network_n_credentials.add("");
-          }
-      }
-
-      //---------------------------------------------x
-      //After creating JSON file (jsondocument), it must be stored in FS
-      //---------------------------------------------x
-      File fx = LittleFS.open("/network_list.json", "w");
-
-      //serializes json and passes it to "fx" var
-      serializeJsonPretty(net_list, fx);
-      fx.close();
-    }
-
-
-    //---------EXISTING JSON---------------------
-    //2. IF JSON ALREADY EXISTS: access to json, reset it, then add new networks to it
-    else{
-      //Serial.println("Network list already exists! Updating it..."); 🟠
-      JsonDocument net_listUp;
-     
-      //1. fetch and open json from FS, then deserializes it
-      File fxup = LittleFS.open("/network_list.json", "w+");
-      deserializeJson(net_listUp, fxup);
-
-      //if there are n<5 networks
-      if(n<5){
-        //updates the values of the entries of the older one
-        net_listUp["found"] = n;
-        JsonArray network = net_listUp["network"].to<JsonArray>();
-
-        for(byte k = 0; k < n; k++){
-            JsonArray network_n_credentials = network[k]["credentials"].to<JsonArray>();
-            network_n_credentials.add(WiFi.SSID(k));
-            network_n_credentials.add("");    //
-        }
-      }
-
-      //if there are n>5 networks -> it truncates the list to only 5 ssids
-      else{
-            net_listUp["found"] = 5;
-            JsonArray network = net_listUp["network"].to<JsonArray>();
-            
-            for(byte k = 0; k < 5; k++){
-              //dynamically adds, to each entry "k", a new array to the main array "network"
-              JsonArray network_n_credentials = network[k]["credentials"].to<JsonArray>();
-
-              //adds SSID name to the entry[k][0]
-              network_n_credentials.add(WiFi.SSID(k));
-
-              //adds pw field (initially empty) to entry[k][1] 
-              network_n_credentials.add("");
-            }
-      }
-
-      //3. serializing
-      serializeJsonPretty(net_listUp, fxup);
-      fxup.close();
-    }     
-}
-
-void checkConfig(void){
-
-    if(LittleFS.exists("/config.json")){
-      Serial.println(F("config esists, trying to restore it"));
-      creds_available=true;
-
-      File fld = LittleFS.open("/config.json", "r");
-      JsonDocument load_cf;
-      
-      DeserializationError error = deserializeJson(load_cf, fld);
-
-      if (error) {
-        fld.close();
-        Serial.print(F("deserializeJson() failed: "));
-        Serial.println(error.f_str());
-        return;
-      }
-
-      ssid = load_cf[F("ssid")];
-      password = load_cf[F("pw")]; 
-      
-      WiFi.begin(ssid, password);
-
-      //if it restores wifi connection, then it restore the other settings too
-      //if it can't restore wifi, then user must go to webUI to make a new config
-      while(WiFi.status() != WL_CONNECTED){
-          delay(100);
-          mydisplay.setSegments(SEG_try, 3, 0);
-          //Serial.print("+");
-
-        if(myTimer(3000)){  
-          
-          ++attempts;
-          mydisplay.showNumberDec(attempts, true, 1, 3);
-        }
-
-        else if(attempts==4){
-          attempts=0;
-          creds_available = false;
-          //Serial.println(F("Can't connect. Goto webUI"));
-          break;
-        }
-      }
-
-      if(WiFi.status() == WL_CONNECTED){
-
-        attempts=0;
-        connected=true;
-        setup_mode=false;
-        Serial.println("WIFI RESTORED");
-
-        if(load_cf["ntp_ad"].is<const char*>()){
-          ntp_addr = strdup(load_cf["ntp_ad"]);
-          gmt_offset = load_cf["offset"];
-          configTime(gmt_offset*3600, 3600, ntp_addr);
-          start_NtpClient=true;
-        }
-        else{
-          start_NtpClient=false;
-        }
-  
-        brightness = (uint8_t)load_cf["br"];
-        mydisplay.setBrightness(brightness);
-        blink=  load_cf[F("blink")];
-        br_auto = load_cf[F("br_auto")];
-        twelve= load_cf[F("twelve")];
-        fld.close();
-      }
-  }
-  return;
-}
-
-//this is called when you request resources from esp webserver that don't exists
-void notFound(AsyncWebServerRequest *request){
-    request->send(404, "text/plain", "NOT FOUND");
-}
-
-void initMDNS(){
-   MDNS.end();
-
-  if (MDNS.begin("espclock")) {
-    MDNS.addService("http", "tcp", 80);
-  } else {
-    Serial.println("mDNS fail");
-  }
-}
-
+// ── setup() ───────────────────────────────────────────────────────────────
 void setup() {
+    Serial.begin(115200);
 
-  Serial.begin(115200);
-  
-  //display
-  mydisplay.setBrightness(7); 
-  mydisplay.clear();
+    displayInit();
 
-  //LittleFS.format();
-
-  //Begin LittleFS can throw Err0
-  if(!LittleFS.begin()){
-    mydisplay.setSegments(SEG_Err, 3, 0);
-    mydisplay.showNumberDec(0, false, 1, 3);
-    //Serial.println("An Error has occurred while mounting LittleFS");
-    delay(10000);
-    return;
-  }
-  
-  //can throw Err1
-  if(!LittleFS.exists("/index.html")){
-    mydisplay.setSegments(SEG_Err, 3, 0);
-    mydisplay.showNumberDec(1, false, 1, 3);
-    //Serial.println("\nSetup Html page NOT FOUND!");
-    delay(10000);
-    return;
-  }
-  
-  checkConfig();
-  
-  //PHASE1 - AP_STA_MODE + WIFI SCAN
-  //here scans for networks, and as already said, networks are then stored in json
-  //Serial.println("\nPHASE 1.0: AP_STA_MODE + WIFI SCAN");
-
-  WiFi.mode(WIFI_AP_STA);   
-  WiFi.setAutoReconnect(true);
-  initMDNS();
-  delay(100);
-
-  if(WiFi.status() != WL_CONNECTED){
-    wifiScan();
-  }
-  
-  //PHASE 2: start AP only in setup mode (no saved config)
-  if(!connected){
-    WiFi.softAP(esp_ssid, esp_password, false, 2);     //Starting AP on given credential
-  }
-
-  //Route for root index.html
-  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){ 
-    request->send(LittleFS, "/index.html", "text/html" ); 
-    Serial.println("Device detected");
-  });
-
-  //this is triggered when entering to the webUI after the clock is set. It checks the status of all of the UI elements and updates it
-  server.on("/uicheck", HTTP_GET, [](AsyncWebServerRequest *request){
-       
-    JsonDocument uicheck_json;
-
-    uicheck_json["conn"] = connected;
-    uicheck_json["bright"]= brightness; 
-    uicheck_json["br_auto"] = br_auto;
-    uicheck_json["blink"] = blink;
-    uicheck_json["twelve"] = twelve;
-    uicheck_json["config"] = (LittleFS.exists("/config.json")) ? 1 : 0;
-    uicheck_json["millis"] = millis();
-    uicheck_json["msovfl"] = ms_ovfl;
-    uicheck_json["setup_mode"] = setup_mode;
-    uicheck_json["ap_ssid"] = esp_ssid;
-
-
-    String uc_str;
-    serializeJson(uicheck_json, uc_str);
-
-    request->send(200,  "application/json", uc_str);
-  });
-
-  //client requests list of ssids and server sends it to client
-  server.on("/scan", HTTP_GET, [](AsyncWebServerRequest *request) {
-
-    File f = LittleFS.open("/network_list.json", "r");
-
-    //checks json integrity
-    if(!f) {
-      //Serial.println("Error opening /network_list.json");
-      request->send(500, "application/json", "{\"error\":\"Can't open network_list.json\"}");
-      f.close();
+    // Mount the filesystem (Err0 = mount failure)
+    if (!LittleFS.begin()) {
+        displayShowError(0);
+        delay(10000);
+        return;
     }
 
-    else{
-      request->send(LittleFS,  "/network_list.json", "application/json");
-      newScan = true;
-      f.close();
-    }
-  });
-
-  //---------------------------------------------x
-  //client(JS) sends http POST req with wifi credentials (inside the body) to server
-  server.on("/sendcreds", HTTP_POST, [](AsyncWebServerRequest *request) {}, NULL, [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
-           
-    //deserializes http POST req body (has creds inside) from client
-    JsonDocument thebody;
-    deserializeJson(thebody, data);
-
-    const char* user_ssid_str = thebody["ssid"];  
-    const char* user_pw = thebody["pw"];
-
-    ssid = strdup(user_ssid_str);
-    password = strdup(user_pw);
-    creds_available = true;
-    
-    request->send(200, "application/json", "{\"creds\":\"OK\"}");
-  }); 
-
-  //refresh SSID list on frontend
-  server.on("/refresh", HTTP_GET, [](AsyncWebServerRequest *request) {
-           
-    File f = LittleFS.open("/network_list.json", "r");
-
-    //check json integrity
-    if(!f) {
-      Serial.println(F("Error opening /network_list.json"));
-      request->send(500, "application/json", "{\"error\":\"Failed to open network_list.json\"}");
-      f.close();
-      return;
+    // Verify the web UI is present (Err1 = missing index.html)
+    if (!LittleFS.exists("/index.html")) {
+        displayShowError(1);
+        delay(10000);
+        return;
     }
 
-    else{
-      request->send(LittleFS,  "/network_list.json", "application/json");
-      f.close();
-      newScan =true;
-    }
-  });
+    // Attempt to restore a previously saved configuration
+    checkConfig();
 
-  //HTTP GET req from client, in order to know if connection attempt was successful
-  server.on("/wifi_status", HTTP_GET, [](AsyncWebServerRequest *request) {
-          
-    if(attempts == 4){
-      creds_available = false;
-      //attempts=0;
-      Serial.println(password);
-      Serial.println(F("handler says: 5 attempts->WRONG PASSWORD - RESET attempts to 0"));
-      request->send(200, "application/json", "{\"stat\":\"fail\"}");
+    WiFi.mode(WIFI_AP_STA);
+    WiFi.setAutoReconnect(true);
+
+    initMDNS();
+    delay(100);
+
+    // Scan for nearby networks when not already connected
+    if (WiFi.status() != WL_CONNECTED) {
+        wifiScan();
     }
 
-    else{
-      ++attempts;
-      if(WiFi.status() == WL_CONNECTED){
-        //attempts=0;
-        Serial.println(password);
-        String ip = WiFi.localIP().toString();
-        String resp = "{\"stat\":\"ok\",\"ip\":\"" + ip + "\",\"mdns\":\"espclock\"}";
-        request->send(200, "application/json", resp);
-      }
-
-      else{
-        Serial.println("PLEASE WAIT");
-        request->send(200, "application/json", "{\"stat\":\"wait\"}");
-      }
-    }
-  });
-
-  server.on("/updatetime", HTTP_POST, [](AsyncWebServerRequest *request){}, NULL, [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total){
-
-    JsonDocument ntp_json;
-    deserializeJson(ntp_json, data);
-
-    ntp_addr = strdup(ntp_json["ntp_addr"]); 
-    gmt_offset = (int)atoi(ntp_json["offset"]);
-    configTime(gmt_offset*3600, 3600, ntp_addr); 
-  
-    if(start_NtpClient == false){
-      start_NtpClient=true;
-    }
-    
-    request->send(200, "application/json", "{\"ntp\":\"OK\"}");
-  });
-
-
-  server.on("/slider", HTTP_POST, [](AsyncWebServerRequest *request){}, NULL, [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total){
-          
-          //optimization: maybe i shouldn't use JSON for this (?)
-          JsonDocument bgt_json;
-          deserializeJson(bgt_json, data);
-
-          //extract light value
-          brightness =(uint8_t)atoi(bgt_json["bgt"]);
-          mydisplay.setBrightness(brightness); 
-          request->send(200, "application/json", "{\"status\":\"BGT OK\"}");
-  });
-
-  
-  server.on("/br_auto", HTTP_POST, [](AsyncWebServerRequest *request){}, NULL, [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total){
-
-            JsonDocument br_auto_json;
-            deserializeJson(br_auto_json, data);
-            br_auto = br_auto_json["br"];
-            /*to get single time vars 
-            Serial.println("Time variables");
-            char timeHour[3];
-            strftime(timeHour,3, "%H", &timeinfo); https://cplusplus.com/reference/ctime/strftime/*/
-            
-            //optimization: should i replace it with a switch-case (?)
-            if(timeinfo.tm_hour >= 0 && timeinfo.tm_hour < 9){
-              brightness=0;
-              mydisplay.setBrightness(0);
-              request->send(200, "application/json", "{\"status\":\"0\"}");
-            }
-
-            else if(timeinfo.tm_hour >= 7 && timeinfo.tm_hour < 17){
-              brightness=6;
-              mydisplay.setBrightness(6);
-              request->send(200, "application/json", "{\"status\":\"6\"}");
-            }
-
-            else if(timeinfo.tm_hour >= 17 && timeinfo.tm_hour < 20){
-              brightness=3;
-              mydisplay.setBrightness(3);
-              request->send(200, "application/json", "{\"status\":\"3\"}");
-            }
-
-            else if(timeinfo.tm_hour >= 20){
-              brightness=2;
-              mydisplay.setBrightness(2);
-              request->send(200, "application/json", "{\"status\":\"2\"}");
-            }
-  });
-
-  server.on("/blink", HTTP_POST, [](AsyncWebServerRequest *request){}, NULL, [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total){
-
-            JsonDocument blink_json;
-            deserializeJson(blink_json, data);
-            blink = (uint8_t)blink_json["bl"];  //update blink var
-            request->send(200, "application/json", "{\"status\":\"updated\"}");
-  });
-
-  server.on("/twelve", HTTP_POST, [](AsyncWebServerRequest *request){}, NULL, [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total){
-
-            JsonDocument twelve_json;
-            deserializeJson(twelve_json, data);
-            twelve = (uint8_t)twelve_json["tw"];  //update blink var
-            request->send(200, "application/json", "{\"status\":\"updated\"}");
-  });
-
-  server.on("/alarm", HTTP_POST, [](AsyncWebServerRequest *request){}, NULL, [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total){
-  
-  });
-
-  /*
-  server.on("/timer", HTTP_POST, [](AsyncWebServerRequest *request){}, NULL, [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total){
-  });*/
-
-  server.on("/config", HTTP_POST, [](AsyncWebServerRequest *request){}, NULL, [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total){
-
-    JsonDocument scf_json;
-    deserializeJson(scf_json, data);
-    bool saveconfig = scf_json["save"];
-    //Serial.println(saveconfig);
-
-    if(saveconfig==1){ //user wants to save/update config
-              
-      JsonDocument config;
-
-      config[F("ssid")] = ssid;           //const *char
-      config[F("pw")] = password;         //const *char
-      if(ntp_addr) config[F("ntp_ad")] = ntp_addr;  //const *char
-      config[F("offset")] = gmt_offset;   //offset saved as int
-      config[F("br_auto")] = br_auto;     //bool as 1 or 0
-      config[F("br")] = brightness;       //uint8_t
-      config[F("blink")] = blink;        //bool as 1 or 0
-      config[F("twelve")] = twelve;      
-      config.shrinkToFit();
-              
-      File fc = LittleFS.open("/config.json", "w+");
-
-      //serializes json and passes it to "fc" var, in order to store it in FS 
-      serializeJsonPretty(config, fc);
-      fc.close();
-      Serial.println(F("\nCONFIG SAVED"));
+    // Only start the AP in setup mode (no saved config)
+    if (!connected) {
+        WiFi.softAP(esp_ssid, esp_password, false, 2);
     }
 
-                
-    else if(LittleFS.exists("/config.json") && saveconfig==0){     //if user wants to delete config
-              
-      LittleFS.remove("/config.json");
-     
-      WiFi.disconnect();
-      connected=false;
-      creds_available = false;
-      start_NtpClient=false;
-      attempts=0;
-      setup_mode=true;
-      ap_shutdown_pending=false;
-      WiFi.mode(WIFI_AP_STA);
-      WiFi.softAP(esp_ssid, esp_password, false, 2);
-      Serial.println(F("\n*Config.json DELETED*"));
-    }
-
-    request->send(200, "application/json", "{\"status\":\"updated\"}");
-  });
-
-  server.on("/uptime", HTTP_GET, [](AsyncWebServerRequest *request) {
-
-    String json= "{";
-    json+= "\"ms\":\"" + String(millis()) + "\",";
-    json += "\"msovfl\":\""+ String(ms_ovfl) +"\"";
-    json += "}";
-    request->send(200, "application/json", json); 
-    //request->send(200, "application/json", "{\"ms\":\""+ String(millis()) +"\",\"msovfl\":\""+ String(ms_ovfl) + "\"}"); 
-  });
-
-  server.onNotFound(notFound);
-
-  //start server
-  server.begin();
+    setupRoutes();
 }
 
-
+// ── loop() ────────────────────────────────────────────────────────────────
 void loop() {
-  
-  if(millis() == 4294967295){
-    ms_ovfl++;  //can lead to a bug because uint8_t max value is 255, but it'll reach this value after 50days*256= 35years of activity
-  }
+    // Note: ESP32 mDNS does not require periodic update() calls
 
-  //shut down AP after setup mode transition (15 second grace period for user to read IP/mDNS)
-  if(ap_shutdown_pending && (millis() - ap_shutdown_start) >= 15000UL){
-    WiFi.mode(WIFI_STA);
-    ap_shutdown_pending = false;
-  }
+    // Shut down AP after the setup-mode grace period (15 s)
+    if (ap_shutdown_pending && (millis() - ap_shutdown_start) >= 15000UL) {
+        WiFi.mode(WIFI_STA);
+        ap_shutdown_pending = false;
+    }
 
-  if(newScan==true){
-    wifiScan();
-    newScan=false;
-  }
+    // Perform a deferred WiFi rescan when requested by the /scan or /refresh handler
+    if (newScan) {
+        wifiScan();
+        newScan = false;
+    }
 
-  if(start_NtpClient==true){
-    getLocalTime(&timeinfo);
-   
-    if(myTimer(1000)){
-        //printLocalTime();
+    // ── Clock display ──────────────────────────────────────────────────────
+    if (start_NtpClient) {
+        getLocalTime(&timeinfo);
 
-        if(br_auto==true){
-             
-            switch(timeinfo.tm_hour){
-    
-              case 0 || 00: 
-              brightness=0;
-              mydisplay.setBrightness(0);
-              break;
-
-              case 9:
-              brightness=6;
-              mydisplay.setBrightness(6);
-              break;
-
-              case 17:
-              brightness=3;
-              mydisplay.setBrightness(3);
-              break;
-
-              case 20: //maybe i can remove this one and put brightness=2 at 17:00
-              brightness=2; 
-              mydisplay.setBrightness(2);
-              break;
+        if (myTimer(1000)) {
+            // Auto-brightness: adjust at transition hours
+            if (br_auto) {
+                switch (timeinfo.tm_hour) {
+                    case 0:  brightness = 0; displaySetBrightness(0); break;
+                    case 9:  brightness = 6; displaySetBrightness(6); break;
+                    case 17: brightness = 3; displaySetBrightness(3); break;
+                    case 20: brightness = 2; displaySetBrightness(2); break;
+                }
             }
-        }   
-           
-        
-        if(blink==1){
-            if(colon==true){   //colon is ON
-              if(!twelve){
-                mydisplay.showNumberDecEx(timeinfo.tm_hour, 0b01000000, true, 2, 0);
-                mydisplay.showNumberDecEx(timeinfo.tm_min, 0b01000000, true, 2, 2);
-              }
 
-              else{
-                if(timeinfo.tm_hour <= 12){
-                  mydisplay.showNumberDecEx(timeinfo.tm_hour, 0b01000000, true, 2, 0);
-                 
-                }
-
-                else{
-                  mydisplay.showNumberDecEx(timeinfo.tm_hour-12, 0b01000000, true, 2, 0);
-                }
-
-                mydisplay.showNumberDecEx(timeinfo.tm_min, 0b01000000, true, 2, 2);
-              }
-              colon=false;  
-          }
-
-          else if(colon==false){  //colon is OFF
-
-              if(!twelve){
-                mydisplay.showNumberDecEx(timeinfo.tm_hour, 0, true, 2, 0);
-                mydisplay.showNumberDecEx(timeinfo.tm_min, 0, true, 2, 2);
-              }
-
-              else{ //if 12hr mode is active
-                if(timeinfo.tm_hour <= 12){
-                  mydisplay.showNumberDecEx(timeinfo.tm_hour, 0, true, 2, 0);
-                }
-                
-                else{
-                  mydisplay.showNumberDecEx(timeinfo.tm_hour-12, 0, true, 2, 0);
-                }
-
-                mydisplay.showNumberDecEx(timeinfo.tm_min, 0, true, 2, 2);
-              }
-
-            colon=true;
-          }
+            // Render the current time
+            if (blink) {
+                displayShowTime(timeinfo.tm_hour, timeinfo.tm_min, colon, twelve);
+                colon = !colon;
+            } else {
+                displayShowTime(timeinfo.tm_hour, timeinfo.tm_min, true, twelve);
+            }
         }
-
-			//if blink==0
-        else{
-			if(!twelve){
-            	mydisplay.showNumberDecEx(timeinfo.tm_hour, 0b01000000, true, 2, 0);
-            	mydisplay.showNumberDecEx(timeinfo.tm_min, 0b01000000, true, 2, 2);
-			}
-
-			else{
-                if(timeinfo.tm_hour <= 12){
-                  mydisplay.showNumberDecEx(timeinfo.tm_hour, 0b01000000, true, 2, 0);
-                 
-                }
-
-                else{
-                  mydisplay.showNumberDecEx(timeinfo.tm_hour-12, 0b01000000, true, 2, 0);
-                }
-
-                mydisplay.showNumberDecEx(timeinfo.tm_min, 0b01000000, true, 2, 2);
-              }
-        }
-        
+    } else {
+        displayAnim();
     }
-  }     
 
-  else{
-    displayAnim();
-  }
+    // ── WiFi connection ────────────────────────────────────────────────────
+    if (!connected && creds_available) {
+        displayAnim();
+        WiFi.begin(ssid, password);
 
-  //optimization: instead of using "bool connected", i can only use WL_CONNECTED
-  if(connected == false && creds_available == true ){
-    
-    displayAnim();
-    WiFi.begin(ssid, password);
-    
-    while(1){
+        while (true) {
+            displayAnim();
 
-      displayAnim();
-            
-      //cycles here until it's connected to wifi
-      if (WiFi.status() != WL_CONNECTED && creds_available==true){
-          delay(200);
-      }
-    
-      //once connected, exit form while(1) with break, and then from first if since "connected==true" now
-      else if(WiFi.status() == WL_CONNECTED){
-        connected = true;
-        initMDNS();
+            if (WiFi.status() != WL_CONNECTED && creds_available) {
+                delay(200);
+            } else if (WiFi.status() == WL_CONNECTED) {
+                connected = true;
+                initMDNS();
 
-        //first-time setup: auto-save WiFi credentials and schedule AP shutdown
-        if(setup_mode){
-          JsonDocument config;
-          config[F("ssid")] = ssid;
-          config[F("pw")] = password;
-          config[F("br_auto")] = br_auto;
-          config[F("br")] = brightness;
-          config[F("blink")] = blink;
-          config[F("twelve")] = twelve;
-          config.shrinkToFit();
-          File fc = LittleFS.open("/config.json", "w+");
-          serializeJsonPretty(config, fc);
-          fc.close();
-          setup_mode = false;
-          ap_shutdown_start = millis();
-          ap_shutdown_pending = true;
+                // First-time setup: auto-save credentials and defaults;
+                // NTP and AP shutdown are deferred to /setup_timezone.
+                if (setup_mode) {
+                    JsonDocument config;
+                    config[F("ssid")]    = ssid;
+                    config[F("pw")]      = password;
+                    config[F("ntp_ad")]  = ntp_addr;
+                    config[F("tz")]      = tz_posix;
+                    config[F("br_auto")] = br_auto;
+                    config[F("br")]      = brightness;
+                    config[F("blink")]   = blink;
+                    config[F("twelve")]  = twelve;
+                    config.shrinkToFit();
+                    File fc = LittleFS.open("/config.json", "w+");
+                    serializeJsonPretty(config, fc);
+                    fc.close();
+                    setup_mode = false;
+                }
+                break;
+            } else if (attempts == 4) {
+                attempts        = 0;
+                creds_available = false;
+                Serial.println("RESET Attempts from LOOP");
+                Serial.println(password);
+                break;
+            }
         }
-        break;
-      }
-
-      else if(attempts == 4){
-        attempts=0;  //reset "attempts", so it can try a new connection
-        creds_available=false;
-        Serial.println("RESET Attempts from LOOP");
-        Serial.println(password);
-        break; //exit from while(1)
-      }
     }
-  }
 }

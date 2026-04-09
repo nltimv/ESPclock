@@ -27,21 +27,18 @@ struct tm   timeinfo;
 void setup() {
     Serial.begin(115200);
 
-    mydisplay.setBrightness(7);
-    mydisplay.clear();
+    displayInit();
 
     // Mount the filesystem (Err0 = mount failure)
     if (!LittleFS.begin()) {
-        mydisplay.setSegments(SEG_Err, 3, 0);
-        mydisplay.showNumberDec(0, false, 1, 3);
+        displayShowError(0);
         delay(10000);
         return;
     }
 
     // Verify the web UI is present (Err1 = missing index.html)
     if (!LittleFS.exists("/index.html")) {
-        mydisplay.setSegments(SEG_Err, 3, 0);
-        mydisplay.showNumberDec(1, false, 1, 3);
+        displayShowError(1);
         delay(10000);
         return;
     }
@@ -70,7 +67,7 @@ void setup() {
 
 // ── loop() ────────────────────────────────────────────────────────────────
 void loop() {
-    MDNS.update();
+    MDNS.update();   // ESP8266 requires periodic mDNS polling
 
     // Shut down AP after the setup-mode grace period (15 s)
     if (ap_shutdown_pending && (millis() - ap_shutdown_start) >= 15000UL) {
@@ -92,40 +89,19 @@ void loop() {
             // Auto-brightness: adjust at transition hours
             if (br_auto) {
                 switch (timeinfo.tm_hour) {
-                    case 0:
-                        brightness = 0;
-                        mydisplay.setBrightness(0);
-                        break;
-                    case 9:
-                        brightness = 6;
-                        mydisplay.setBrightness(6);
-                        break;
-                    case 17:
-                        brightness = 3;
-                        mydisplay.setBrightness(3);
-                        break;
-                    case 20:
-                        brightness = 2;
-                        mydisplay.setBrightness(2);
-                        break;
+                    case 0:  brightness = 0; displaySetBrightness(0); break;
+                    case 9:  brightness = 6; displaySetBrightness(6); break;
+                    case 17: brightness = 3; displaySetBrightness(3); break;
+                    case 20: brightness = 2; displaySetBrightness(2); break;
                 }
             }
 
             // Render the current time
             if (blink) {
-                // Compute the displayed hour with correct 12-hr conversion:
-                //   0  → 12 (midnight), 1-12 → 1-12, 13-23 → 1-11
-                int dispHour = twelve ? (timeinfo.tm_hour % 12 == 0 ? 12 : timeinfo.tm_hour % 12)
-                                      : timeinfo.tm_hour;
-
-                uint8_t colonMask = colon ? 0b01000000 : 0;
-                mydisplay.showNumberDecEx(dispHour,         colonMask, false, 2, 0);
-                mydisplay.showNumberDecEx(timeinfo.tm_min,  colonMask, true,  2, 2);
+                displayShowTime(timeinfo.tm_hour, timeinfo.tm_min, colon, twelve);
                 colon = !colon;
             } else {
-                // Static colon
-                mydisplay.showNumberDecEx(timeinfo.tm_hour, 0b01000000, false, 2, 0);
-                mydisplay.showNumberDecEx(timeinfo.tm_min,  0b01000000, true,  2, 2);
+                displayShowTime(timeinfo.tm_hour, timeinfo.tm_min, true, twelve);
             }
         }
     } else {

@@ -10,10 +10,10 @@
 
 #include <time.h>
 
-// NTP server address (e.g. "pool.ntp.org") – defined in espclock8266.cpp
+// NTP server address (e.g. "pool.ntp.org") – defined in the main .cpp
 extern const char *ntp_addr;
 
-// POSIX timezone string (e.g. "CET-1CEST,M3.5.0,M10.5.0/3") – defined in espclock8266.cpp
+// POSIX timezone string (e.g. "CET-1CEST,M3.5.0,M10.5.0/3") – defined in the main .cpp
 extern const char *tz_posix;
 
 // Set to true once configTzTime() has been called and NTP is running
