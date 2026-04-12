@@ -45,6 +45,35 @@ It uses a ESP8266 (Wemos D1 mini) or ESP32 (XIAO ESP32 C3).
 
 9. And we're done! Hope that you liked my project! If you have any suggestions, let me know!
 
+<h2>🔎 CENTRAL DEVICE FINDER WEB APP</h2>
+
+This repository also includes a static web app to find a clock by `DEVICE_ID`
+on the local network and open its control panel without remembering its IP.
+
+Path: `device-finder/`
+
+- UI: `device-finder/site/index.html`
+- NGINX config: `device-finder/nginx/default.conf`
+- Container image: `device-finder/Dockerfile`
+
+Build and run:
+
+```bash
+cd device-finder
+docker build -t espclock-device-finder .
+docker run --rm -p 8080:80 espclock-device-finder
+```
+
+Then open: `http://<host-ip>:8080/`
+
+Notes:
+- The finder first tries `http://espclock-<DEVICE_ID>.local`, then can scan a
+  user-provided `/24` subnet by querying `/uicheck`.
+- Setup-mode deep links are supported with `http://192.168.4.1/` when connected
+  to the device AP `ESPclock-<DEVICE_ID>`.
+- If the finder page is hosted over HTTPS, browsers may block discovery requests
+  to local HTTP device endpoints (mixed-content restriction).
+
 <h2>📱 WEB UI </h2>
 <img src="https://github.com/nltimv/ESPclock/blob/0129184b364e81b9ba27bd0f2a37386c2fa2500b/pics/v2.2.1.jpg" alt="Alt Text" width="100%" height="100%">
 
@@ -126,4 +155,3 @@ There are (at the moment) two errors that can be displayed from the 7-segment di
 <li>Err0 -> when "LittleFS.begin()" fails</li>
 <li>Err1 -> when "index.html" doesn't exists in flash memory (user forgot to upload it)</li>
 </ul>
-

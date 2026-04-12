@@ -10,6 +10,21 @@ The following changes have been made in this fork by
 
 ## 2026-04-12
 
+### Central device finder app and cross-origin discovery support (`device-finder/`, `lib/espclock_common/src/web_server.cpp`)
+- Added a new centrally-hostable static web app (`device-finder/site/index.html`)
+  that:
+  - accepts `DEVICE_ID`,
+  - tries mDNS deep links (`http://espclock-<DEVICE_ID>.local`),
+  - scans a user-selected `/24` subnet by calling `/uicheck` to find the
+    matching `ESPclock-<DEVICE_ID>` AP identity,
+  - generates a QR code for the discovered deep link,
+  - supports setup-mode deep-link flow using `http://192.168.4.1/` when the
+    client is connected to the device AP.
+- Added `device-finder/Dockerfile` and `device-finder/nginx/default.conf` to
+  host the finder app with NGINX.
+- Added default CORS response headers in the firmware web server so the central
+  finder app can query `/uicheck` from a different origin.
+
 ### `lib/espclock_common/src/tz_lookup.h` + `tz_lookup.cpp`: New IANA→POSIX lookup — reads from `tz.json`
 - New header `tz_lookup.h` declares `const char* tzLookup(const char* ianaName)`.
 - `tz_lookup.cpp` opens `/tz.json` from LittleFS at call time and uses ArduinoJson's
