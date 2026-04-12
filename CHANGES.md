@@ -10,6 +10,136 @@ The following changes have been made in this fork by
 
 ## 2026-04-12
 
+### `lib/espclock_common/src/tz_lookup.h` + `tz_lookup.cpp`: New IANA→POSIX lookup — reads from `tz.json`
+- New header `tz_lookup.h` declares `const char* tzLookup(const char* ianaName)`.
+- `tz_lookup.cpp` opens `/tz.json` from LittleFS at call time and uses ArduinoJson's
+  `DeserializationOption::Filter` to materialise only the single requested key, keeping
+  heap usage minimal.  Result is copied into a static 80-byte buffer and returned.
+- `tz.json` is therefore the single source of truth: served to the browser for populating
+  the region/city dropdowns, and read by the firmware for POSIX string resolution.
+
+### `lib/espclock_common/src/ntp.h`, `src/espclock.cpp`, `web_server.cpp`, `wifi_manager.cpp`: IANA name stored + sent from device
+- Added `tz_iana` global (`const char*`, default `"UTC"`) alongside `tz_posix`.
+- `/uicheck` endpoint now returns the IANA name in the `"tz"` field instead of the POSIX string.
+- `/updatetime` and `/setup_timezone` receive the IANA name from the browser, call
+  `tzLookup()` to derive `tz_posix`, and persist the IANA name in `config.json`.
+- `checkConfig()` in `wifi_manager.cpp` reads the IANA name from `config.json`,
+  calls `tzLookup()` to populate `tz_posix`, and calls `configTzTime()`.
+
+### `data/index.html`: POSIX lookup removed from JS; simplified TZ restore
+- Both submit handlers now post the selected IANA name directly (e.g. `Europe/Amsterdam`);
+  no `TZ_DATA` JS lookup is performed.
+- `setTzFromIana()` replaces `setTzFromPosix()`: it receives the IANA name returned by
+  `/uicheck` and directly selects the matching region and city dropdowns — no scanning
+  or `localStorage` needed.
+- Removed `saveTzChoice()` and all `localStorage` usage (disambiguation is now handled
+  by the device storing the exact IANA name).
+- `buildTzData` comment updated to note that POSIX values are used by the C++ table only.
+
+### `data/index.html`: City dropdown values changed to IANA names
+- Removed city-merging logic from `buildTzData`; it now stores the raw JSON directly.
+- `populateTzCity` sets each option's value to the full IANA name (e.g. `Europe/Amsterdam`)
+  and derives the display label from it.
+- `populateTzRegion` extracts unique region prefixes from flat JSON keys.
+- Removed the dead block-comment containing the old merged TZ data.
+
+### `data/index.html`: Verified and corrected TZ_DATA against IANA tzdata (nayarsystems/posix_tz_db)
+Cross-referenced every POSIX string against the authoritative nayarsystems/posix_tz_db
+(which mirrors IANA tzdata). The following errors were found and corrected:
+- **Africa/Cairo**: now uses correct DST rules `EET-2EEST,M4.5.5/0,M10.5.4/24`
+  (Egypt reinstated DST in 2023); split from Tripoli (`EET-2`, no DST).
+- **Africa/Juba, Khartoum**: moved from EAT-3 group to CAT-2 (UTC+2) — both are
+  Central Africa Time, not East Africa Time.
+- **America/Adak**: corrected abbreviation `HAST10HADT` → `HST10HDT`.
+- **America/Asunción**: fixed STD/DST order; Paraguay standard is UTC-4
+  (`<-04>4<-03>,M9.1.6/0,M4.1.6/0`), not UTC-3.
+- **America/Godthab (Nuuk)**: now includes DST rules
+  `<-02>2<-01>,M3.5.0/-1,M10.5.0/0`; split from Noronha (`<-02>2`, no DST).
+- **America/Havana**: corrected DST end month from October (M10) to November (M11)
+  and fixed transition format: `CST5CDT,M3.2.0/0,M11.1.0/1`.
+- **America/Santiago**: fixed STD/DST order; Chilean standard is UTC-4
+  (`<-04>4<-03>,M9.1.6/24,M4.1.6/24`), not UTC-3.
+- **America/St. John's**: simplified transition string to `NST3:30NDT,M3.2.0,M11.1.0`.
+- **America/Bogotá, Guayaquil, Lima, Rio Branco**: separated from `EST5` group
+  into `<-05>5` (different POSIX abbreviation).
+- **Antarctica/Macquarie**: added (observes Australian DST).
+- **Antarctica/Vostok**: corrected UTC+6 → UTC+5 (`<+05>-5`).
+- **Asia/Almaty, Qyzylorda**: moved from UTC+6 to UTC+5 group (Kazakhstan reform 2024).
+- **Asia/Novosibirsk**: moved from UTC+6 group to UTC+7 group (correct offset).
+- **Asia/Bishkek**: added to UTC+6 group (was missing).
+- **Asia/Amman**: `EET-2EEST,…` → `<+03>-3` (Jordan abolished DST in 2022).
+- **Asia/Damascus**: `EET-2EEST,…` → `<+03>-3` (Syria moved to permanent UTC+3).
+- **Asia/Gaza, Hebron**: corrected DST transition `M3.4.4/48,M10.4.5` →
+  `M3.4.4/50,M10.4.4/50`.
+- **Asia/Kabul, Kathmandu, Rangoon, Tehran**: corrected abbreviation format from
+  `<+04:30>` style to `<+0430>` style (standard POSIX form).
+- **Atlantic/Azores**: removed redundant DST name `<+00>0` → `<+00>`.
+- **Atlantic/Stanley (Falkland Islands)**: corrected UTC-2 → UTC-3 (`<-03>3`);
+  split from South Georgia (`<-02>2`).
+- **Australia/Eucla**: corrected `<+08:45>` → `<+0845>`.
+- **Australia/Lord Howe**: corrected `<+10:30>` → `<+1030>`.
+- **Europe/Dublin**: separated from London group; Dublin uses the inverted
+  `IST-1GMT0,M10.5.0,M3.5.0/1` string (IST = Irish Standard Time in summer).
+- **Europe/Lisbon**: separated from London/GMT0BST group; Lisbon uses
+  `WET0WEST,M3.5.0/1,M10.5.0` (Western European Time).
+- **Europe/Chisinau**: separated from Athens/Helsinki group; uses slightly different
+  spring transition `EET-2EEST,M3.5.0,M10.5.0/3` (midnight, not 3 am).
+- **Europe/Kirov**: added to Moscow group.
+- **Pacific/Apia**: removed DST rules; Samoa no longer observes DST → `<+13>-13`.
+- **Pacific/Fiji**: removed DST rules; Fiji suspended DST in 2022 → `<+12>-12`.
+- **Pacific/Chatham**: corrected abbreviation format to `<+1245>` / `<+1345>`.
+- **Pacific/Chuuk**: corrected to `<+10>-10`; separated from Guam/Saipan (`ChST-10`).
+- **Pacific/Marquesas**: corrected `<-09:30>` → `<-0930>`.
+- **Pacific/Norfolk**: corrected `<+12>-12` DST name → implicit `<+12>`.
+- **Pacific/Port Moresby**: corrected `AEST-10` → `<+10>-10` (AEST is an Australian
+  abbreviation; PNG uses a different local abbreviation).
+
+### `data/tz.json` (new file): IANA timezone database with POSIX strings
+- New file served by the ESP as `/tz.json`.
+- Contains all inhabited canonical IANA timezone names as keys
+  (e.g. `"Europe/Amsterdam"`) with their POSIX timezone strings as values,
+  sourced from the authoritative nayarsystems/posix_tz_db (which mirrors IANA tzdata).
+- The JS `buildTzData(raw)` function groups the flat JSON by region (the
+  `Region/City` prefix), merges cities that share the same POSIX string within
+  a region into a single dropdown option, and replaces underscores with spaces in
+  city names.
+- `window.onload` now fetches `/tz.json` and `/uicheck` in parallel via
+  `Promise.all`, so dropdown population and value restoration always happen in
+  the correct order with a single round-trip.
+- The old large inline `TZ_DATA` JS constant in `index.html` has been removed;
+  the new code is entirely data-driven from `tz.json`.
+
+### `data/index.html`: Two-dropdown timezone picker with full coverage
+- Replaced both flat `<select>` timezone lists with a linked region → city two-dropdown
+  UX (no external library; works fully offline in AP mode).
+- Added a self-contained `TZ_DATA` JS object covering all inhabited IANA timezone
+  regions (Africa, America, Antarctica, Arctic, Asia, Atlantic, Australia, Europe,
+  Indian, Pacific, UTC) with correct POSIX strings and DST rules.
+- Cities sharing an identical POSIX string are merged into a single option labelled
+  `"City1, City2, ..."` within the same region.
+- Helper functions `populateTzRegion`, `populateTzCity`, and `setTzFromPosix`
+  replace the old static `<option>` lists and handle dropdown linking and saved-value
+  restoration.
+- Refactored NTP settings layout from a horizontal flex row to a vertical column so
+  the two timezone selects fit naturally below the NTP server input.
+
+### `data/index.html`: Merge duplicate timezone options
+- Merged `Europe/Rome` and `Europe/Paris` (both `CET-1CEST,M3.5.0,M10.5.0/3`)
+  into a single `"Europe/Rome, Europe/Paris"` option in both timezone dropdowns,
+  ensuring every option is individually selectable.
+
+### Fix: spurious default AP started in normal mode (`src/espclock.cpp`)
+- `WiFi.mode(WIFI_AP_STA)` was called unconditionally in `setup()`, even when
+  `checkConfig()` had already restored a saved connection (`connected = true`).
+  On ESP8266, switching to `WIFI_AP_STA` immediately activates the AP interface
+  with the chip's default SSID (e.g. `ESP-EEA8FE`).  Because the subsequent
+  `WiFi.softAP(esp_ssid, …)` call is guarded by `if (!connected)`, the AP was
+  never configured with the intended credentials, leaving the rogue default AP
+  running.
+- Fixed by switching the mode conditionally:
+  `WiFi.mode(connected ? WIFI_STA : WIFI_AP_STA)`.  In normal (non-setup) mode
+  the AP interface is never activated.
+
 ### Move `platformio.ini` to project root
 - Moved `firmware/platformio.ini` to the project root so PlatformIO can be
   invoked from the repository root without entering the `firmware/` subdirectory.

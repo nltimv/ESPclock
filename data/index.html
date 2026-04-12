@@ -17,7 +17,7 @@
 <html>
 <head>
 
-<title>ESPclock by telepath</title>
+<title>ESPclock Control Panel</title>
 
 <meta charset="UTF-8" />
 <!--<meta> tag makes your web page responsive in any browser (laptop, tablet or smartphone)-->
@@ -96,7 +96,7 @@ body{
 
 .ntp_wrapper{
     display:flex;
-    flex-direction:row;
+    flex-direction:column;
    
 }
 
@@ -106,19 +106,19 @@ body{
     padding: 0 0 0 6px; 
     color:#bec1c4;
     background-color: #444444; 
-    width: 150px;
+    width: 237px;
     height: 40px;
     border-radius: 6px;
     border-style:none;
 }
 
-#tz_select{
-    margin:0px 19px 00px 10px;
+.tz_sel{
+    margin:0px 0px 8px 19px;
     font-size: 15px; 
-    padding: 0 0 0 6px ; 
+    padding: 0 0 0 6px; 
     background-color: #444444; 
     color:#bec1c4;
-    width: 120px;
+    width: 237px;
     height: 40px;
     border-radius: 6px;
     border-style:none;
@@ -463,32 +463,11 @@ width: 100%;
                 <div id="wifi_connected_msg" style="display:none; padding: 26px 26px 26px 26px; text-align: center; line-height: 1.8;">
                     <div id="wifi_tz_setup">
                         <p id="wifi_connected_info" style="font-size: 16px; color: #dee2e6; margin: 0 0 20px 0;"></p>
-                        <p style="font-size: 14px; color: #6e9cd1; margin: 0 0 8px 0;">Select your timezone:</p>
-                        <select id="setup_tz_select" style="font-size: 15px; padding: 0 0 0 6px; background-color: #444444; color: #bec1c4; width: 240px; height: 40px; border-radius: 6px; border-style: none; margin: 0 0 16px 0;">
-                            <option value="UTC0">UTC</option>
-                            <option value="GMT0BST,M3.5.0/1,M10.5.0">Europe/London</option>
-                            <option value="CET-1CEST,M3.5.0,M10.5.0/3">Europe/Rome</option>
-                            <option value="CET-1CEST,M3.5.0,M10.5.0/3">Europe/Paris</option>
-                            <option value="EET-2EEST,M3.5.0/3,M10.5.0/4">Europe/Helsinki</option>
-                            <option value="MSK-3">Europe/Moscow</option>
-                            <option value="EST5EDT,M3.2.0/2,M11.1.0/2">US/Eastern</option>
-                            <option value="CST6CDT,M3.2.0/2,M11.1.0/2">US/Central</option>
-                            <option value="MST7MDT,M3.2.0/2,M11.1.0/2">US/Mountain</option>
-                            <option value="PST8PDT,M3.2.0/2,M11.1.0/2">US/Pacific</option>
-                            <option value="HST10">US/Hawaii</option>
-                            <option value="AST-3">South America/Buenos Aires</option>
-                            <option value="WAT-1">Africa/Lagos</option>
-                            <option value="EET-2">Africa/Cairo</option>
-                            <option value="SAST-2">Africa/Johannesburg</option>
-                            <option value="GST-4">Asia/Dubai</option>
-                            <option value="IST-5:30">Asia/Kolkata</option>
-                            <option value="ICT-7">Asia/Bangkok</option>
-                            <option value="SGT-8">Asia/Singapore</option>
-                            <option value="JST-9">Asia/Tokyo</option>
-                            <option value="CST-8">Asia/Shanghai</option>
-                            <option value="AEST-10AEDT,M10.1.0,M4.1.0/3">Australia/Sydney</option>
-                            <option value="NZST-12NZDT,M9.5.0,M4.1.0/3">Pacific/Auckland</option>
-                        </select><br>
+                        <p style="font-size: 14px; color: #6e9cd1; margin: 0 0 12px 0;">Select your timezone:</p>
+                        <label for="setup_tz_region" style="font-size: 13px; color: #adb5bd; display: block; margin: 0 0 4px 0;">Region</label>
+                        <select id="setup_tz_region" style="font-size: 15px; padding: 0 0 0 6px; background-color: #444444; color: #bec1c4; width: 240px; height: 40px; border-radius: 6px; border-style: none; margin: 0 0 10px 0;"></select><br>
+                        <label for="setup_tz_city" style="font-size: 13px; color: #adb5bd; display: block; margin: 0 0 4px 0;">City</label>
+                        <select id="setup_tz_city" style="font-size: 15px; padding: 0 0 0 6px; background-color: #444444; color: #bec1c4; width: 240px; height: 40px; border-radius: 6px; border-style: none; margin: 0 0 16px 0;"></select><br>
                         <button type="button" id="setup_tz_btn" style="cursor: pointer; font-size: 15px; font-weight: 550; width: 240px; height: 40px; text-align: center; border-radius: 8px; border-style: none; color: #ced4da; background-color: #267bbc; user-select: none;">SAVE &amp; FINISH</button>
                     </div>
                     <div id="wifi_final_msg" style="display:none;">
@@ -506,34 +485,14 @@ width: 100%;
                                 border-radius: 6px 6px 6px 6px; border-color:transparent;border-style:none; 
                                 "></select>-->
 
-                <h3 style="margin: 18px 0px 18px 26px;">NTP Server Settings</h3>
+                <h3 style="margin: 18px 0px 18px 26px;">Time Settings</h3>
                 <div class="ntp_wrapper">
+                    <label for="ntp_id" style="margin: 0 0 4px 19px; font-size: 14px; color: #adb5bd;">NTP Server</label>
                     <input id="ntp_id" type="text" placeholder="Enter NTP address" required>
-                    <select id="tz_select" name="tz_select" required>
-                        <option value="UTC0">UTC</option>
-                        <option value="GMT0BST,M3.5.0/1,M10.5.0">Europe/London</option>
-                        <option value="CET-1CEST,M3.5.0,M10.5.0/3">Europe/Rome</option>
-                        <option value="CET-1CEST,M3.5.0,M10.5.0/3">Europe/Paris</option>
-                        <option value="EET-2EEST,M3.5.0/3,M10.5.0/4">Europe/Helsinki</option>
-                        <option value="MSK-3">Europe/Moscow</option>
-                        <option value="EST5EDT,M3.2.0/2,M11.1.0/2">US/Eastern</option>
-                        <option value="CST6CDT,M3.2.0/2,M11.1.0/2">US/Central</option>
-                        <option value="MST7MDT,M3.2.0/2,M11.1.0/2">US/Mountain</option>
-                        <option value="PST8PDT,M3.2.0/2,M11.1.0/2">US/Pacific</option>
-                        <option value="HST10">US/Hawaii</option>
-                        <option value="AST-3">South America/Buenos Aires</option>
-                        <option value="WAT-1">Africa/Lagos</option>
-                        <option value="EET-2">Africa/Cairo</option>
-                        <option value="SAST-2">Africa/Johannesburg</option>
-                        <option value="GST-4">Asia/Dubai</option>
-                        <option value="IST-5:30">Asia/Kolkata</option>
-                        <option value="ICT-7">Asia/Bangkok</option>
-                        <option value="SGT-8">Asia/Singapore</option>
-                        <option value="JST-9">Asia/Tokyo</option>
-                        <option value="CST-8">Asia/Shanghai</option>
-                        <option value="AEST-10AEDT,M10.1.0,M4.1.0/3">Australia/Sydney</option>
-                        <option value="NZST-12NZDT,M9.5.0,M4.1.0/3">Pacific/Auckland</option>
-                    </select>
+                    <label for="tz_region" style="margin: 10px 0 4px 19px; font-size: 14px; color: #adb5bd;">Timezone — Region</label>
+                    <select id="tz_region" class="tz_sel"></select>
+                    <label for="tz_city" style="margin: 0 0 4px 19px; font-size: 14px; color: #adb5bd;">Timezone — City</label>
+                    <select id="tz_city" class="tz_sel" style="margin-bottom:10px;"></select>
                 </div>
 
                 <button disabled type="submit" id="update_but" value="update_but">
@@ -754,16 +713,72 @@ width: 100%;
         }
 
     const deleteconf = document.getElementById("deleteconf_id");
-            
+
+    //----- TIMEZONE DATA & HELPERS -----
+    //----- TIMEZONE DATA & HELPERS -----
+    let TZ_DATA = {};
+
+    // Loads TZ_DATA directly from the flat {"Region/City": "POSIX"} JSON object.
+    // POSIX values are used by the C++ lookup table; JS only needs the IANA keys.
+    function buildTzData(raw) {
+        TZ_DATA = raw;
+    }
+
+    function populateTzCity(regionSelId, citySelId, selectIana) {
+        const region = document.getElementById(regionSelId).value;
+        const citySel = document.getElementById(citySelId);
+        citySel.innerHTML = '';
+        const prefix = region === 'UTC' ? '' : region + '/';
+        Object.keys(TZ_DATA)
+            .filter(k => prefix ? k.startsWith(prefix) : k === 'UTC')
+            .forEach(ianaName => {
+                const opt = document.createElement('option');
+                opt.value = ianaName;
+                opt.textContent = ianaName.slice(prefix.length).replace(/_/g, ' ');
+                citySel.appendChild(opt);
+            });
+        if (selectIana) citySel.value = selectIana;
+    }
+
+    function populateTzRegion(regionSelId, citySelId) {
+        const regionSel = document.getElementById(regionSelId);
+        regionSel.innerHTML = '';
+        const regions = [...new Set(Object.keys(TZ_DATA).map(k => {
+            const slash = k.indexOf('/');
+            return slash >= 0 ? k.slice(0, slash) : k;
+        }))];
+        regions.forEach(region => {
+            const opt = document.createElement('option');
+            opt.value = region;
+            opt.textContent = region;
+            regionSel.appendChild(opt);
+        });
+        regionSel.addEventListener('change', () => populateTzCity(regionSelId, citySelId, null));
+        populateTzCity(regionSelId, citySelId, null);
+    }
+
+    // Restore the region/city dropdowns directly from a saved IANA timezone name.
+    function setTzFromIana(regionSelId, citySelId, ianaName) {
+        if (!ianaName) return;
+        const slash = ianaName.indexOf('/');
+        const region = slash >= 0 ? ianaName.slice(0, slash) : ianaName;
+        document.getElementById(regionSelId).value = region;
+        populateTzCity(regionSelId, citySelId, ianaName);
+    }
+    //----- END TIMEZONE DATA & HELPERS -----
+
     //onload() is mandatory, otherwise won't run the 1st fetch
     //it activates when server.on("/") function is called
-    window.onload = function () {        
-        //networkFetch("/scan");        
-
-        //check device mode and update UI accordingly
-        fetch("/uicheck")
-            .then(data=> data.json())
-            .then(data=> {
+    window.onload = function () {
+        // Fetch timezone data and device status in parallel, then set up UI
+        Promise.all([
+            fetch('/tz.json').then(r => r.json()),
+            fetch('/uicheck').then(r => r.json())
+        ]).then(([tzRaw, data]) => {
+            // Build grouped TZ_DATA from the flat IANA JSON, then populate dropdowns
+            buildTzData(tzRaw);
+            populateTzRegion('setup_tz_region', 'setup_tz_city');
+            populateTzRegion('tz_region', 'tz_city');
 
             if(data.ap_ssid) ap_ssid = data.ap_ssid;
 
@@ -791,11 +806,7 @@ width: 100%;
                 }
 
                 if(data.tz){
-                    const tz_select = document.getElementById("tz_select");
-                    const has_option = Array.from(tz_select.options).some(option => option.value === data.tz);
-                    if(has_option){
-                        tz_select.value = data.tz;
-                    }
+                    setTzFromIana('tz_region', 'tz_city', data.tz);
                 }
 
                 if(data.blink === false){
@@ -1001,7 +1012,7 @@ width: 100%;
             }
 
             setup_tz_btn.onclick = function(){
-                const tz_chosen = document.getElementById("setup_tz_select").value;
+                const tz_chosen = document.getElementById("setup_tz_city").value;
                 fetch("/setup_timezone", {
                     method: "POST",
                     headers: { 'Content-Type': "application/json" },
@@ -1024,7 +1035,7 @@ width: 100%;
                 const ntp_input = document.getElementById("ntp_id");
                 let ntp_by_user = ntp_input.value;
 
-                const tz_by_user = document.getElementById("tz_select").value;
+                const tz_by_user = document.getElementById("tz_city").value;
 
                 if(!ntp_by_user || ntp_by_user.trim().length === 0){
                     ntp_by_user = "pool.ntp.org";

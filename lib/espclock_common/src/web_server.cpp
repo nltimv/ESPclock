@@ -11,6 +11,7 @@
 #include "display_api.h"
 #include "ntp.h"
 #include "json_config.h"
+#include "tz_lookup.h"
 
 #ifdef ESP8266
 #include <ESP8266WiFi.h>
@@ -37,6 +38,11 @@ void setupRoutes() {
         Serial.println("Connection detected");
     });
 
+    // Timezone data – serve the IANA→POSIX JSON map used by the browser dropdowns
+    server.on("/tz.json", HTTP_GET, [](AsyncWebServerRequest *request) {
+        request->send(LittleFS, "/tz.json", "application/json");
+    });
+
     // UI status – returns all current state so the front-end can sync its controls
     server.on("/uicheck", HTTP_GET, [](AsyncWebServerRequest *request) {
         JsonDocument uicheck_json;
@@ -47,7 +53,7 @@ void setupRoutes() {
         uicheck_json["twelve"]     = twelve;
         uicheck_json["config"]     = (LittleFS.exists("/config.json")) ? 1 : 0;
         uicheck_json["ntp"]        = ntp_addr;
-        uicheck_json["tz"]         = tz_posix;
+        uicheck_json["tz"]         = tz_iana;
         uicheck_json["setup_mode"] = setup_mode;
         uicheck_json["ap_ssid"]    = esp_ssid;
 
@@ -130,7 +136,9 @@ void setupRoutes() {
                 ntp_addr = strdup(ntp_json["ntp_addr"]);
             }
             if (ntp_json["tz"].is<const char*>()) {
-                tz_posix = strdup(ntp_json["tz"]);
+                tz_iana  = strdup(ntp_json["tz"]);
+                const char* posix = tzLookup(tz_iana);
+                tz_posix = posix ? posix : "UTC0";
             }
 
             configTzTime(tz_posix, ntp_addr);
@@ -149,7 +157,9 @@ void setupRoutes() {
             deserializeJson(tz_json, data);
 
             if (tz_json["tz"].is<const char*>()) {
-                tz_posix = strdup(tz_json["tz"]);
+                tz_iana  = strdup(tz_json["tz"]);
+                const char* posix = tzLookup(tz_iana);
+                tz_posix = posix ? posix : "UTC0";
             }
 
             // Persist the timezone into the saved config
@@ -158,7 +168,7 @@ void setupRoutes() {
                 JsonDocument saved_cf;
                 deserializeJson(saved_cf, fr);
                 fr.close();
-                saved_cf[F("tz")] = tz_posix;
+                saved_cf[F("tz")] = tz_iana;
                 saved_cf.shrinkToFit();
                 File fw = LittleFS.open("/config.json", "w+");
                 serializeJsonPretty(saved_cf, fw);
@@ -268,7 +278,7 @@ void setupRoutes() {
                 }
 
                 config[F("ntp_ad")]  = ntp_addr;
-                config[F("tz")]      = tz_posix;
+                config[F("tz")]      = tz_iana;
                 config[F("br_auto")] = br_auto;
                 config[F("br")]      = brightness;
                 config[F("blink")]   = blink;

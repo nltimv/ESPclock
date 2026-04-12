@@ -13,7 +13,10 @@
 // NTP server address (e.g. "pool.ntp.org") – defined in the main .cpp
 extern const char *ntp_addr;
 
-// POSIX timezone string (e.g. "CET-1CEST,M3.5.0,M10.5.0/3") – defined in the main .cpp
+// IANA timezone name (e.g. "Europe/Amsterdam") – defined in the main .cpp
+extern const char *tz_iana;
+
+// POSIX timezone string derived from tz_iana via tzLookup() – defined in the main .cpp
 extern const char *tz_posix;
 
 // Set to true once configTzTime() has been called and NTP is running

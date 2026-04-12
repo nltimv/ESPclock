@@ -30,6 +30,7 @@
 
 // ── NTP / time globals ─────────────────────────────────────────────────────
 const char *ntp_addr      = "pool.ntp.org";
+const char *tz_iana       = "UTC";
 const char *tz_posix      = "UTC0";
 bool        start_NtpClient = false;
 struct tm   timeinfo;
@@ -57,7 +58,9 @@ void setup() {
     // Attempt to restore a previously saved configuration
     checkConfig();
 
-    WiFi.mode(WIFI_AP_STA);
+    // Only enable the AP interface when entering setup mode; in normal mode
+    // WIFI_STA is sufficient and prevents ESP from raising a default AP.
+    WiFi.mode(connected ? WIFI_STA : WIFI_AP_STA);
     WiFi.setAutoReconnect(true);
 
     initMDNS();
@@ -142,7 +145,7 @@ void loop() {
                     config[F("ssid")]    = ssid;
                     config[F("pw")]      = password;
                     config[F("ntp_ad")]  = ntp_addr;
-                    config[F("tz")]      = tz_posix;
+                    config[F("tz")]      = tz_iana;
                     config[F("br_auto")] = br_auto;
                     config[F("br")]      = brightness;
                     config[F("blink")]   = blink;

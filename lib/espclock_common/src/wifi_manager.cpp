@@ -10,6 +10,7 @@
 #include "display_api.h"
 #include "ntp.h"
 #include "json_config.h"
+#include "tz_lookup.h"
 
 #ifdef ESP8266
 #include <ESP8266WiFi.h>
@@ -158,7 +159,9 @@ void checkConfig() {
         }
 
         if (load_cf["tz"].is<const char*>()) {
-            tz_posix = strdup(load_cf["tz"]);
+            tz_iana  = strdup(load_cf["tz"]);
+            const char* posix = tzLookup(tz_iana);
+            tz_posix = posix ? posix : "UTC0";
             configTzTime(tz_posix, ntp_addr);
             start_NtpClient = true;
         } else {
