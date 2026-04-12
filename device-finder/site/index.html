@@ -164,22 +164,8 @@
       <label for="deviceId">Device ID</label>
       <input id="deviceId" maxlength="32" placeholder="Example: wY5h" />
 
-      <div class="row">
-        <div>
-          <label for="subnetPrefix">Subnet prefix (for /24 scan)</label>
-          <input id="subnetPrefix" value="192.168.1" placeholder="Example: 192.168.1" />
-        </div>
-        <div>
-          <label for="scanRange">Host range</label>
-          <input id="scanRange" value="1-254" placeholder="Example: 1-120" />
-        </div>
-      </div>
-      <label for="scanConcurrency">Max parallel probes</label>
-      <input id="scanConcurrency" value="16" placeholder="1-32" />
-
       <div class="buttons">
-        <button id="probeMdns">Find via mDNS</button>
-        <button id="scanSubnet">Scan subnet</button>
+        <button id="connectBtn">Connect</button>
       </div>
 
       <div id="status" class="status" style="min-height:20px"></div>
@@ -190,6 +176,28 @@
         Browsers often block discovery requests to local <code>http://</code>
         devices (mixed-content restriction).
       </p>
+
+      <details style="margin-top:12px">
+        <summary class="small">Advanced options</summary>
+        <div style="padding-top:8px">
+          <div class="row">
+            <div>
+              <label for="subnetPrefix">Subnet prefix</label>
+              <input id="subnetPrefix" value="192.168.1" placeholder="Example: 192.168.1" />
+            </div>
+            <div>
+              <label for="scanRange">Host range</label>
+              <input id="scanRange" value="1-254" placeholder="Example: 1-120" />
+            </div>
+          </div>
+          <label for="scanConcurrency">Max parallel probes</label>
+          <input id="scanConcurrency" value="16" placeholder="1-32" />
+          <div class="buttons">
+            <button id="probeMdns">Find via mDNS</button>
+            <button id="scanSubnet">Scan subnet</button>
+          </div>
+        </div>
+      </details>
     </div>
 
     <!-- Shareable deep-link generator card -->
@@ -529,6 +537,12 @@
       };
     }
 
+    function connectDevice() {
+      const deviceId = cleanDeviceId($('deviceId').value);
+      if (!deviceId) { setStatus('Enter a device ID first.'); return; }
+      location.href = `/d/${deviceId}`;
+    }
+
     async function probeMdns() {
       const deviceId = cleanDeviceId($("deviceId").value);
       if (!deviceId) { setStatus("Enter a device ID first."); return; }
@@ -587,9 +601,10 @@
     async function initManualMode() {
       $("manualPage").style.display = "block";
       if (location.protocol === "https:") $("httpsWarning").style.display = "block";
-      $("probeMdns").onclick       = probeMdns;
-      $("scanSubnet").onclick      = scanSubnet;
-      $("buildFinderLink").onclick = buildFinderLink;
+      $('connectBtn').onclick       = connectDevice;
+      $('probeMdns').onclick        = probeMdns;
+      $('scanSubnet').onclick       = scanSubnet;
+      $('buildFinderLink').onclick  = buildFinderLink;
 
       // Auto-detect subnet and pre-fill the input
       const subnet = await detectSubnetPrefix();

@@ -10,6 +10,14 @@ The following changes have been made in this fork by
 
 ## 2026-04-12
 
+### Simplified manual mode UI (`device-finder/site/index.html`)
+- Reduced the manual mode homepage to just a Device ID field and a **Connect**
+  button.  The Connect button tries mDNS first and then auto-scans the
+  WebRTC-detected subnet (same fast path as deep-link mode).
+- Moved the subnet prefix, host range, concurrency inputs and the individual
+  "Find via mDNS" / "Scan subnet" buttons into a collapsed `<details>` section
+  labelled "Advanced options", keeping the interface clean for typical users.
+
 ### Auto-detect subnet and scan automatically (`device-finder/site/index.html`)
 - Added WebRTC-based local IP detection (`detectLocalIp()`) that discovers the
   phone's/computer's LAN IP address without any user input.  The subnet prefix
