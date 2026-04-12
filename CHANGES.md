@@ -17,13 +17,14 @@ The following changes have been made in this fork by
   - tries mDNS deep links (`http://espclock-<DEVICE_ID>.local`),
   - scans a user-selected `/24` subnet by calling `/uicheck` to find the
     matching `ESPclock-<DEVICE_ID>` AP identity,
-  - generates a QR code for the discovered deep link,
+  - generates a QR code for the discovered deep link on the client side,
   - supports setup-mode deep-link flow using `http://192.168.4.1/` when the
     client is connected to the device AP.
 - Added `device-finder/Dockerfile` and `device-finder/nginx/default.conf` to
   host the finder app with NGINX.
-- Added default CORS response headers in the firmware web server so the central
-  finder app can query `/uicheck` from a different origin.
+- Added selective CORS handling on `/uicheck` so finder pages hosted on
+  localhost, private-network IPs, or `.local` origins can query device status
+  cross-origin without exposing it to arbitrary public origins.
 
 ### `lib/espclock_common/src/tz_lookup.h` + `tz_lookup.cpp`: New IANA→POSIX lookup — reads from `tz.json`
 - New header `tz_lookup.h` declares `const char* tzLookup(const char* ianaName)`.

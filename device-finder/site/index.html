@@ -51,6 +51,8 @@
           <input id="scanRange" value="1-254" placeholder="Example: 1-120" />
         </div>
       </div>
+      <label for="scanConcurrency">Max parallel probes</label>
+      <input id="scanConcurrency" value="16" placeholder="1-32" />
 
       <div class="buttons">
         <button id="probeMdns">Find via mDNS first</button>
@@ -69,6 +71,7 @@
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
   <script>
     const $ = (id) => document.getElementById(id);
     const statusEl = $("status");
@@ -123,6 +126,12 @@
       statusEl.textContent = msg;
     }
 
+    function parseConcurrency(input) {
+      const n = parseInt(String(input || "").trim(), 10);
+      if (Number.isNaN(n)) return 16;
+      return Math.max(1, Math.min(32, n));
+    }
+
     function showResult(baseUrl, details) {
       const deepLink = `${baseUrl}/`;
       const setupMdns = `${mdnsBaseUrl(cleanDeviceId($("deviceId").value))}/`;
@@ -149,8 +158,18 @@
         }
       };
 
-      qrEl.src = `https://quickchart.io/qr?size=240&text=${encodeURIComponent(deepLink)}`;
-      qrEl.style.display = "block";
+      if (window.QRCode && typeof window.QRCode.toDataURL === "function") {
+        window.QRCode.toDataURL(deepLink, { width: 240, margin: 1 }, (err, url) => {
+          if (err || !url) {
+            qrEl.style.display = "none";
+            return;
+          }
+          qrEl.src = url;
+          qrEl.style.display = "block";
+        });
+      } else {
+        qrEl.style.display = "none";
+      }
     }
 
     async function probeMdns() {
@@ -193,7 +212,7 @@
       resultEl.style.display = "none";
       qrEl.style.display = "none";
 
-      const concurrency = 24;
+      const concurrency = parseConcurrency($("scanConcurrency").value);
       let idx = 0;
       let checked = 0;
       let found = null;

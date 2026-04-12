@@ -29,13 +29,42 @@ static void notFound(AsyncWebServerRequest *request) {
     request->send(404, "text/plain", "NOT FOUND");
 }
 
+static bool isTrustedFinderOrigin(const String &origin) {
+    if (!(origin.startsWith("http://") || origin.startsWith("https://"))) return false;
+
+    if (origin.startsWith("http://localhost") || origin.startsWith("https://localhost") ||
+        origin.startsWith("http://127.") || origin.startsWith("https://127.") ||
+        origin.startsWith("http://192.168.") || origin.startsWith("https://192.168.") ||
+        origin.startsWith("http://10.") || origin.startsWith("https://10.") ||
+        origin.indexOf(".local") > 0) {
+        return true;
+    }
+
+    // RFC1918 private range 172.16.0.0/12 spans 172.16.x.x through 172.31.x.x.
+    for (uint8_t i = 16; i <= 31; i++) {
+        String httpPrefix  = "http://172." + String(i) + ".";
+        String httpsPrefix = "https://172." + String(i) + ".";
+        if (origin.startsWith(httpPrefix) || origin.startsWith(httpsPrefix)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+static void addFinderCorsHeaders(AsyncWebServerRequest *request, AsyncWebServerResponse *response) {
+    if (!request->hasHeader("Origin")) return;
+    String origin = request->header("Origin");
+    if (!isTrustedFinderOrigin(origin)) return;
+
+    response->addHeader("Access-Control-Allow-Origin", origin);
+    response->addHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+    response->addHeader("Access-Control-Allow-Headers", "Content-Type");
+    response->addHeader("Vary", "Origin");
+}
+
 // ── Route registration ─────────────────────────────────────────────────────
 void setupRoutes() {
-    // Allow cross-origin requests so a centrally hosted finder page can query /uicheck.
-    DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
-    DefaultHeaders::Instance().addHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-    DefaultHeaders::Instance().addHeader("Access-Control-Allow-Headers", "Content-Type");
-
     // Root – serve the single-page web UI
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
         request->send(LittleFS, "/index.html", "text/html");
@@ -63,7 +92,16 @@ void setupRoutes() {
 
         String uc_str;
         serializeJson(uicheck_json, uc_str);
-        request->send(200, "application/json", uc_str);
+        AsyncWebServerResponse *response = request->beginResponse(200, "application/json", uc_str);
+        addFinderCorsHeaders(request, response);
+        request->send(response);
+    });
+
+    // Preflight support for finder app CORS requests
+    server.on("/uicheck", HTTP_OPTIONS, [](AsyncWebServerRequest *request) {
+        AsyncWebServerResponse *response = request->beginResponse(204);
+        addFinderCorsHeaders(request, response);
+        request->send(response);
     });
 
     // Return the cached network list (and schedule a fresh scan)
