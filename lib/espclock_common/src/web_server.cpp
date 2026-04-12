@@ -32,11 +32,20 @@ static void notFound(AsyncWebServerRequest *request) {
 static bool isTrustedFinderOrigin(const String &origin) {
     if (!(origin.startsWith("http://") || origin.startsWith("https://"))) return false;
 
+    String hostPart = origin;
+    int    schemeIx = hostPart.indexOf("://");
+    if (schemeIx >= 0) hostPart = hostPart.substring(schemeIx + 3);
+    int slashIx = hostPart.indexOf('/');
+    if (slashIx >= 0) hostPart = hostPart.substring(0, slashIx);
+    int colonIx = hostPart.indexOf(':');
+    if (colonIx >= 0) hostPart = hostPart.substring(0, colonIx);
+    bool localDomainOrigin = hostPart.endsWith(".local");
+
     if (origin.startsWith("http://localhost") || origin.startsWith("https://localhost") ||
         origin.startsWith("http://127.") || origin.startsWith("https://127.") ||
         origin.startsWith("http://192.168.") || origin.startsWith("https://192.168.") ||
         origin.startsWith("http://10.") || origin.startsWith("https://10.") ||
-        origin.indexOf(".local") > 0) {
+        localDomainOrigin) {
         return true;
     }
 
@@ -60,6 +69,7 @@ static void addFinderCorsHeaders(AsyncWebServerRequest *request, AsyncWebServerR
     response->addHeader("Access-Control-Allow-Origin", origin);
     response->addHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
     response->addHeader("Access-Control-Allow-Headers", "Content-Type");
+    response->addHeader("Access-Control-Max-Age", "86400");
     response->addHeader("Vary", "Origin");
 }
 

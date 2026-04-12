@@ -67,11 +67,10 @@
       <p class="small" id="httpsWarning" style="display:none">
         <span class="warn">Warning:</span> This page is loaded via HTTPS. Browsers often block discovery requests to local <code>http://</code> devices (mixed-content restriction).
       </p>
-      <p class="small">Setup-mode deep-link support is possible: when connected to the device AP <code>ESPclock-&lt;DEVICE_ID&gt;</code>, open <a id="setupApLink" href="http://192.168.4.1/" target="_blank" rel="noopener">http://192.168.4.1/</a>.</p>
+      <p class="small">Setup-mode deep-link support is possible: when connected to the device AP <code>ESPclock-&lt;DEVICE_ID&gt;</code>, open <a href="http://192.168.4.1/" target="_blank" rel="noopener">http://192.168.4.1/</a>.</p>
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
   <script>
     const $ = (id) => document.getElementById(id);
     const statusEl = $("status");
@@ -96,10 +95,19 @@
 
     function parseRange(input) {
       const m = String(input || "").trim().match(/^(\d{1,3})\s*-\s*(\d{1,3})$/);
-      if (!m) return [1, 254];
-      const a = Math.max(1, Math.min(254, parseInt(m[1], 10)));
-      const b = Math.max(1, Math.min(254, parseInt(m[2], 10)));
+      if (!m) return null;
+      const first = parseInt(m[1], 10);
+      const second = parseInt(m[2], 10);
+      if (first < 1 || first > 254 || second < 1 || second > 254) return null;
+      const a = first;
+      const b = second;
       return a <= b ? [a, b] : [b, a];
+    }
+
+    function isValidSubnetPrefix(prefix) {
+      const octet = "(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)";
+      const re = new RegExp(`^${octet}\\.${octet}\\.${octet}$`);
+      return re.test(prefix);
     }
 
     async function fetchJson(url, timeoutMs = 1200) {
@@ -142,7 +150,9 @@
         <div style="margin-top:8px">
           <button id="openControl">Open control panel</button>
           <button id="copyLink" class="secondary">Copy deep link</button>
+          <button id="generateQr" class="secondary">Generate QR code</button>
         </div>
+        <div class="small warn" style="margin-top:8px"><strong>Privacy warning:</strong> Clicking \"Generate QR code\" sends the deep-link URL (local IP or mDNS hostname) to quickchart.io.</div>
         <div class="small" style="margin-top:8px">
           Setup-mode deep links: <a href="${setupMdns}" target="_blank" rel="noopener">${setupMdns}</a> or <a href="http://192.168.4.1/" target="_blank" rel="noopener">http://192.168.4.1/</a>
         </div>
@@ -157,19 +167,10 @@
           setStatus("Could not copy automatically. Copy this manually: " + deepLink);
         }
       };
-
-      if (window.QRCode && typeof window.QRCode.toDataURL === "function") {
-        window.QRCode.toDataURL(deepLink, { width: 240, margin: 1 }, (err, url) => {
-          if (err || !url) {
-            qrEl.style.display = "none";
-            return;
-          }
-          qrEl.src = url;
-          qrEl.style.display = "block";
-        });
-      } else {
-        qrEl.style.display = "none";
-      }
+      $("generateQr").onclick = () => {
+        qrEl.src = `https://quickchart.io/qr?size=240&text=${encodeURIComponent(deepLink)}`;
+        qrEl.style.display = "block";
+      };
     }
 
     async function probeMdns() {
@@ -194,16 +195,21 @@
     async function scanSubnet() {
       const deviceId = cleanDeviceId($("deviceId").value);
       const prefix = String($("subnetPrefix").value || "").trim();
-      const [start, end] = parseRange($("scanRange").value);
+      const range = parseRange($("scanRange").value);
 
       if (!deviceId) {
         setStatus("Enter a device ID first.");
         return;
       }
-      if (!/^\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(prefix)) {
+      if (!isValidSubnetPrefix(prefix)) {
         setStatus("Invalid subnet prefix. Use format like 192.168.1");
         return;
       }
+      if (!range) {
+        setStatus("Invalid host range. Use values from 1 to 254, e.g. 1-120");
+        return;
+      }
+      const [start, end] = range;
 
       const hosts = [];
       for (let i = start; i <= end; i++) hosts.push(`${prefix}.${i}`);
@@ -213,6 +219,7 @@
       qrEl.style.display = "none";
 
       const concurrency = parseConcurrency($("scanConcurrency").value);
+      const statusUpdateEvery = 12;
       let idx = 0;
       let checked = 0;
       let found = null;
@@ -220,9 +227,9 @@
       async function worker() {
         while (!found && idx < hosts.length) {
           const ip = hosts[idx++];
-          const data = await fetchJson(`http://${ip}/uicheck`, 1100);
+          const data = await fetchJson(`http://${ip}/uicheck`, 800);
           checked++;
-          if (checked % 12 === 0) setStatus(`Scanning... ${checked}/${hosts.length}`);
+          if (checked % statusUpdateEvery === 0) setStatus(`Scanning... ${checked}/${hosts.length}`);
           if (isExpectedDevice(data, deviceId)) {
             found = { ip, data };
             return;
