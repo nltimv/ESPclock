@@ -10,6 +10,25 @@ The following changes have been made in this fork by
 
 ## 2026-04-12
 
+### Deep-link auto-discovery mode and shareable link generator (`device-finder/site/index.html`)
+- Added path-based deep-link routing: `https://<finder-host>/d/<DEVICE_ID>`
+  auto-discovers the device and redirects the browser to its control panel.
+  Scan a QR code containing this URL (generated with any external QR tool) to open
+  the device without knowing its IP address.
+- Discovery sequence on deep-link load:
+  1. mDNS probe (`http://espclock-<DEVICE_ID>.local/uicheck`)
+  2. AP address probe (`http://192.168.4.1/uicheck`)
+  3. Subnet scan fallback displayed in the page when both fast probes fail
+- Auto-redirect fires after a 700 ms confirmation delay; a manual
+  "Open Control Panel" button is also shown as a fallback.
+- Added "Generate Shareable Deep Link" card in the manual mode: enter a
+  `DEVICE_ID` to receive the `<origin>/d/<DEVICE_ID>` URL ready to copy and
+  paste into any QR code generator.
+- QR code generation is intentionally not built into the app; only the deep-link
+  URL is produced.
+- The existing NGINX `try_files` rule already handles `/d/*` paths correctly
+  — no NGINX changes were needed.
+
 ### Central device finder app and cross-origin discovery support (`device-finder/`, `lib/espclock_common/src/web_server.cpp`)
 - Added a new centrally-hostable static web app (`device-finder/site/index.html`)
   that:
