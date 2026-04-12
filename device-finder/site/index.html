@@ -231,8 +231,6 @@
 
       const ap = expectedApSsid(deviceId);
       const setupMdns = `${mdnsBaseUrl(deviceId)}/`;
-      $("setupApLink").textContent = "http://192.168.4.1/";
-
       setStatus(`Trying setup links for ${ap}...`);
 
       const setupData = await fetchJson("http://192.168.4.1/uicheck", 900);
