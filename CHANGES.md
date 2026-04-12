@@ -10,6 +10,51 @@ The following changes have been made in this fork by
 
 ## 2026-04-12
 
+### Auto-detect subnet and scan automatically (`device-finder/site/index.html`)
+- Added WebRTC-based local IP detection (`detectLocalIp()`) that discovers the
+  phone's/computer's LAN IP address without any user input.  The subnet prefix
+  is extracted and used for automatic scanning.
+- Deep-link mode now runs an automatic subnet scan (step 3) between the AP
+  probe and showing the fallback UI, **only** when WebRTC detection succeeds
+  (single subnet, 32 parallel probes, 400 ms timeout — completes in ~3–5 s).
+  When detection fails, the scan is skipped entirely and the fallback UI is
+  shown immediately, avoiding a multi-minute wait from blind subnet guessing.
+- The fallback subnet-scan input is pre-filled with the detected prefix.
+- Manual mode also auto-detects and pre-fills the subnet prefix field on load.
+
+### Removed captive portal (`lib/espclock_common/src/wifi_manager.*`, `web_server.cpp`, `src/espclock.cpp`)
+- Removed the DNS-based captive portal (`DNSServer`, `startCaptivePortal()`,
+  `stopCaptivePortal()`, the `notFound` redirect, and all `loop()` lifecycle
+  calls).  On Android, the captive-portal browser sheet closes as soon as the
+  ESP connects to a real Wi-Fi network during setup, preventing the user from
+  completing timezone configuration.  The device-finder app's browser-based AP
+  polling handles the redirect in a normal browser tab instead, which is not
+  affected by network-state changes.
+
+### Unified single-QR setup & settings UX with AP polling (`device-finder/site/index.html`)
+- Redesigned the device-finder deep-link flow so that a **single URL QR code**
+  (e.g. `https://espclock.example.com/d/<ID>`) handles both first-time setup
+  and day-to-day settings changes.  The same URL/NFC tag works in both
+  scenarios:
+  - **Device already configured:** mDNS probe finds it → auto-redirect to
+    control panel (one scan, zero extra steps).
+  - **Device in setup mode:** probes fail → page shows Wi-Fi connection
+    instructions (inline Wi-Fi QR, NFC tap, or manual credentials) → user
+    connects to AP → captive portal opens setup UI automatically.
+- Added **background AP polling** (`192.168.4.1/uicheck` every 3 s) that
+  detects when the user's phone has joined the device AP and auto-redirects to
+  the setup page.  Provides continuous visual feedback via a "Waiting for
+  device…" spinner.
+- Added **escalating hints**: after ~30 seconds of unsuccessful polling, a
+  warning appears prompting the user to verify that the clock is powered on
+  and showing its ready animation.
+- Removed the separate "First-Time Setup" card and "Setup link (AP mode)"
+  button from the manual page — the deep-link route now handles all scenarios.
+- Wi-Fi connection instructions now mention **NFC tag** as a connection method
+  alongside QR and manual credentials.
+- Subnet scan moved to an "Already set up? Find it on your network" collapsible
+  section for users whose device is configured but not discoverable via mDNS.
+
 ### Fix CORS on `/uicheck` for publicly-hosted finder app (`lib/espclock_common/src/web_server.cpp`)
 - Changed `Access-Control-Allow-Origin` on `GET /uicheck` and `OPTIONS /uicheck`
   from a private/local-origin allowlist to `*`.  The endpoint is read-only and
