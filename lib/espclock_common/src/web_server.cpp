@@ -31,6 +31,10 @@ static void notFound(AsyncWebServerRequest *request) {
 
 // ── Route registration ─────────────────────────────────────────────────────
 void setupRoutes() {
+    // Allow cross-origin requests so a centrally hosted finder page can query /uicheck.
+    DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
+    DefaultHeaders::Instance().addHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    DefaultHeaders::Instance().addHeader("Access-Control-Allow-Headers", "Content-Type");
 
     // Root – serve the single-page web UI
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
