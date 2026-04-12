@@ -10,6 +10,13 @@ The following changes have been made in this fork by
 
 ## 2026-04-12
 
+### Move `platformio.ini` to project root
+- Moved `firmware/platformio.ini` to the project root so PlatformIO can be
+  invoked from the repository root without entering the `firmware/` subdirectory.
+- Updated `lib_extra_dirs` from `../lib` to `lib` (now relative to root).
+- Added explicit `src_dir = firmware/src` and `data_dir = firmware/data` to
+  preserve the existing source layout.
+
 ### Unified display driver and single PlatformIO project (`firmware/`, `lib/espclock_common/`)
 - Removed the three separate per-variant PlatformIO projects
   (`esp8266/tm1637_display/`, `esp32/tm1637_display/`, `esp32/tm1652_display/`)
