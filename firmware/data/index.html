@@ -1,16 +1,17 @@
 <!--
-  ESPclock - Web UI (ESP32)
+  ESPclock - Web UI (shared across all hardware variants)
   Originally written by telepath9 (https://github.com/telepath9/ESPclock)
   Licensed under the GNU General Public License v3.0 (GPL-3.0)
 
   This file has been modified by nltimv (https://github.com/nltimv).
-  Date of modification: 2026-04-06
+  Date of modification: 2026-04-09
   Changes:
     - Updated UI to support setup_mode flag and display AP SSID
     - Added support for POSIX timezone strings in time settings
     - Added separate timezone-setup step with /setup_timezone endpoint
     - Display NTP server and timezone in settings
     2026-04-08: IP/mDNS addresses shown as clickable hyperlinks after setup
+    2026-04-12: Moved to shared firmware/data/ (serves all hardware variants)
 -->
 <!DOCTYPE html>
 <html>
@@ -36,7 +37,7 @@ body{
 .flex_container {
     display:flex;
     flex-direction:column;
-    width:315px;
+    width: 315px;
     border-radius: 14px;
     border: 1px solid #3c3e3f; /*#d40228*/
     background-color:#141414;/* #e7e3da;*/  
@@ -111,7 +112,7 @@ body{
     border-style:none;
 }
 
-#gmt_offset{
+#tz_select{
     margin:0px 19px 00px 10px;
     font-size: 15px; 
     padding: 0 0 0 6px ; 
@@ -122,7 +123,6 @@ body{
     border-radius: 6px;
     border-style:none;
 }
-
 #update_but{
     cursor:not-allowed;
     color:#ced4da;
@@ -345,6 +345,50 @@ width: 100%;
   background-color: #f1f1f100;
 }
 
+#del_confirm_dlg{
+    background-color:#1a1a1a;
+    color:#ced4da;
+    border:1px solid #3c3e3f;
+    border-radius: 12px;
+    width: 275px;
+    padding: 14px 14px 12px 14px;
+}
+
+#del_confirm_dlg::backdrop {
+    background: rgba(16, 16, 17, 0.7);
+}
+
+.dlg_actions{
+        display:flex;
+        justify-content:flex-end;
+        gap:8px;
+        margin-top:12px;
+}
+
+#del_confirm_no,
+#del_confirm_yes{
+        border-style:solid;
+        border-width:1px;
+        border-radius:8px;
+        height:34px;
+        font-size:14px;
+        font-weight:550;
+        cursor:pointer;
+        padding:0px 12px;
+}
+
+#del_confirm_no{
+        color:#ced4da;
+        background-color:#444444;
+        border-color:#4E4E56;
+}
+
+#del_confirm_yes{
+        color:#BA1E16;
+        background-color:#740c0c45;
+        border-color:#BA1E16;
+}
+
 .collapsible:after {
   content: '\25BC'; /* Unicode character for "plus" sign (+) */
   font-size: 13px;
@@ -379,6 +423,7 @@ width: 100%;
         <form id="wifi_section" style=" background-color: #1a1a1a; text-align: left;border-style:solid; border-color:#3c3e3f;border-radius: 12px; border-width: 1px;">
             
                 <h3 style="margin: 18px 0px 18px 26px;">WiFi Settings</h3>
+                <div id="wifi_fields">
                 <p id="tip1" style="font-size:14px; margin: 0px 26px 18px 26px; color:#6e9cd1;"></p>
                 <label style="margin-left: 26px;" for="ssid_list">Available networks</label>
                    <div class="ssid_wrapper">
@@ -414,6 +459,42 @@ width: 100%;
                     <span class="popuptext" style="font-size: 14px; user-select: none;" id="myPopup"></span>
                 </div>
                 </div>
+                </div><!--end wifi_fields-->
+                <div id="wifi_connected_msg" style="display:none; padding: 26px 26px 26px 26px; text-align: center; line-height: 1.8;">
+                    <div id="wifi_tz_setup">
+                        <p id="wifi_connected_info" style="font-size: 16px; color: #dee2e6; margin: 0 0 20px 0;"></p>
+                        <p style="font-size: 14px; color: #6e9cd1; margin: 0 0 8px 0;">Select your timezone:</p>
+                        <select id="setup_tz_select" style="font-size: 15px; padding: 0 0 0 6px; background-color: #444444; color: #bec1c4; width: 240px; height: 40px; border-radius: 6px; border-style: none; margin: 0 0 16px 0;">
+                            <option value="UTC0">UTC</option>
+                            <option value="GMT0BST,M3.5.0/1,M10.5.0">Europe/London</option>
+                            <option value="CET-1CEST,M3.5.0,M10.5.0/3">Europe/Rome</option>
+                            <option value="CET-1CEST,M3.5.0,M10.5.0/3">Europe/Paris</option>
+                            <option value="EET-2EEST,M3.5.0/3,M10.5.0/4">Europe/Helsinki</option>
+                            <option value="MSK-3">Europe/Moscow</option>
+                            <option value="EST5EDT,M3.2.0/2,M11.1.0/2">US/Eastern</option>
+                            <option value="CST6CDT,M3.2.0/2,M11.1.0/2">US/Central</option>
+                            <option value="MST7MDT,M3.2.0/2,M11.1.0/2">US/Mountain</option>
+                            <option value="PST8PDT,M3.2.0/2,M11.1.0/2">US/Pacific</option>
+                            <option value="HST10">US/Hawaii</option>
+                            <option value="AST-3">South America/Buenos Aires</option>
+                            <option value="WAT-1">Africa/Lagos</option>
+                            <option value="EET-2">Africa/Cairo</option>
+                            <option value="SAST-2">Africa/Johannesburg</option>
+                            <option value="GST-4">Asia/Dubai</option>
+                            <option value="IST-5:30">Asia/Kolkata</option>
+                            <option value="ICT-7">Asia/Bangkok</option>
+                            <option value="SGT-8">Asia/Singapore</option>
+                            <option value="JST-9">Asia/Tokyo</option>
+                            <option value="CST-8">Asia/Shanghai</option>
+                            <option value="AEST-10AEDT,M10.1.0,M4.1.0/3">Australia/Sydney</option>
+                            <option value="NZST-12NZDT,M9.5.0,M4.1.0/3">Pacific/Auckland</option>
+                        </select><br>
+                        <button type="button" id="setup_tz_btn" style="cursor: pointer; font-size: 15px; font-weight: 550; width: 240px; height: 40px; text-align: center; border-radius: 8px; border-style: none; color: #ced4da; background-color: #267bbc; user-select: none;">SAVE &amp; FINISH</button>
+                    </div>
+                    <div id="wifi_final_msg" style="display:none;">
+                        <p id="wifi_connected_text" style="font-size: 16px; color: #dee2e6; margin: 0;"></p>
+                    </div>
+                </div>
         </form>
 
             <!--  ⌚  NTP SERVER FORM ⌚ -->
@@ -428,9 +509,33 @@ width: 100%;
                 <h3 style="margin: 18px 0px 18px 26px;">NTP Server Settings</h3>
                 <div class="ntp_wrapper">
                     <input id="ntp_id" type="text" placeholder="Enter NTP address" required>
-                    <input required type="number" placeholder="GMT Offset" id="gmt_offset" name="gmt_offset" min="-12" max="12">
+                    <select id="tz_select" name="tz_select" required>
+                        <option value="UTC0">UTC</option>
+                        <option value="GMT0BST,M3.5.0/1,M10.5.0">Europe/London</option>
+                        <option value="CET-1CEST,M3.5.0,M10.5.0/3">Europe/Rome</option>
+                        <option value="CET-1CEST,M3.5.0,M10.5.0/3">Europe/Paris</option>
+                        <option value="EET-2EEST,M3.5.0/3,M10.5.0/4">Europe/Helsinki</option>
+                        <option value="MSK-3">Europe/Moscow</option>
+                        <option value="EST5EDT,M3.2.0/2,M11.1.0/2">US/Eastern</option>
+                        <option value="CST6CDT,M3.2.0/2,M11.1.0/2">US/Central</option>
+                        <option value="MST7MDT,M3.2.0/2,M11.1.0/2">US/Mountain</option>
+                        <option value="PST8PDT,M3.2.0/2,M11.1.0/2">US/Pacific</option>
+                        <option value="HST10">US/Hawaii</option>
+                        <option value="AST-3">South America/Buenos Aires</option>
+                        <option value="WAT-1">Africa/Lagos</option>
+                        <option value="EET-2">Africa/Cairo</option>
+                        <option value="SAST-2">Africa/Johannesburg</option>
+                        <option value="GST-4">Asia/Dubai</option>
+                        <option value="IST-5:30">Asia/Kolkata</option>
+                        <option value="ICT-7">Asia/Bangkok</option>
+                        <option value="SGT-8">Asia/Singapore</option>
+                        <option value="JST-9">Asia/Tokyo</option>
+                        <option value="CST-8">Asia/Shanghai</option>
+                        <option value="AEST-10AEDT,M10.1.0,M4.1.0/3">Australia/Sydney</option>
+                        <option value="NZST-12NZDT,M9.5.0,M4.1.0/3">Pacific/Auckland</option>
+                    </select>
                 </div>
-            
+
                 <button disabled type="submit" id="update_but" value="update_but">
                     UPDATE TIME
                 </button>
@@ -471,99 +576,16 @@ width: 100%;
                     </span>
                 </div>
 
-                <!--
-                <div style="background-color:#1a1a1a;text-align: left; margin-top: 6px;border-style:solid; border-color: #3c3e3f;border-radius: 12px; border-width: 1px;">     
-                    <button type="button" id="alarm_co" class="collapsible" style="padding:18px 10px 18px 26px;">Alarm</button>
-                    <div class="content">
-                        <input id="alarm_time" required type="time" style="font-size:17px;cursor:pointer; padding:0px 5px 0px 5px; color:#bec1c4;background-color: #444444;border-style: none; border-radius:8px; height: 40px; margin:2px 0px 20px 19px; width: 265px;">
-                        <p style="font-size: 17px; margin:0px 0px 18px 26px;">Days</p>
-                        <span style="width: 280px; margin: 0px 19px 18px 21px; user-select: none;">
-                            <button id="mon" value="0" class="days" style="margin: 0px 6px 18px 0px;">M</button>
-                            <button id="tue" value="0" class="days" style="margin: 0px 6px 18px 0px;">T</button>
-                            <button id="wed" value="0" class="days" style="margin: 0px 6px 18px 0px;">W</button>
-                            <button id="thu" value="0" class="days" style="margin: 0px 6px 18px 0px;">T</button>
-                            <button id="fri" value="0" class="days" style="margin: 0px 6px 18px 0px;">W</button>
-                            <button id="sat" value="0" class="days" style="margin: 0px 6px 18px 0px;">S</button>
-                            <button id="sun" value="0" class="days" style="margin: 0px 0px 18px 0px;">S</button>
-                        </span>
-
-                        <span style="display: flex; align-items: center; justify-content: space-between;">
-                            <p style="font-size: 17px; margin:0px 0px 18px 26px;">Snooze</p> 
-                            <input type="number" pattern="\" id="snooze" name="snoo" style="margin:0px 19px 18px 0px; padding-left: 2px; color: #bec1c4;font-size: 15px; background-color: #444444;  height: 40px; width: 100px; border-radius: 6px; border-color:transparent;border-style:none;">
-                          
-                            
-                            <select id="snooze" name="snoo" style="margin:0px 19px 18px 0px; padding-left: 2px; color: #bec1c4;font-size: 15px; background-color: #444444;  height: 40px; width: 100px; border-radius: 6px; border-color:transparent;border-style:none;">
-                                 <option value="0min">Off</option>
-                                 <option value="5min">5 minutes</option>
-                                 <option value="10min">10 minutes</option>
-                                 <option value="15min">15 minutes</option>
-                            </select>
-                        </span>
-
-                        <span style="display: flex; align-items: center; justify-content: space-between;">
-                            <p style="font-size: 17px; margin:0px 0px 18px 26px;">Ringtone</p>
-                            <select disabled id="ringtones" name="ring" style="margin:0px 19px 18px 0px; padding-left: 2px; color: #bec1c4;font-size: 15px; background-color: #444444;  height: 40px; width: 150px; border-radius: 6px; border-color:transparent;border-style:none;">
-                                 <option value="r1">Song 2</option>
-                                 <option value="r2">Super Mario Bros</option>
-                                 <option value="r3">The Godfather</option>
-                                 <option value="r4">???</option>
-                            </select>
-                        </span>
-                        
-                        <div class="two_buttons">
-                        <button type="submit" id="deletealarm_id" value="0">DELETE</button>
-                        <button type="submit" id="setalarm_id" value="1" style="border-color: #AF63E4; color: #AF63E4; background-color: #ae63e427;">SET ALARM</button>
-                        </div>
-                    </div>
-                </div>-->
-                
-                <!--
-                <div style="background-color:#1a1a1a;text-align: left; margin-top: 6px;border-style:solid; border-color: #3c3e3f;border-radius: 12px; border-width: 1px;">     
-                    <button type="button" id="timer_coll" class="collapsible" style="padding:18px 10px 18px 26px;">Timer</button>
-                    <div class="content">
-                        <label style="margin-left: 26px;" for="mm">Minutes</label>
-                        <label style="margin-left:88px;" for="ss">Seconds</label>
-                        <span style="height:40px; background-color:#ffffff00;display: flex; align-items: center; justify-content: space-between; margin:0px 20px 20px 20px;">
-                            <input type="number"class="timer_obj" pattern= "^[0-5]?[0-9]?$" id="mm" min="0" max="59" style=" border-radius: 6px;background-color:#444444;border-color:#444444;color:#bec1c4; border-style:none; margin:0px 0px 0px 0px;width: 120px; height: 40px;" type="number" >
-                            <h3 style="margin: 0px 0px 4px 0px">:</h3>
-                            <input type="number"class="timer_obj" pattern= "^[0-5]?[0-9]?$" id="ss" min="0" max="59" style="border-radius: 6px;background-color:#444444;border-color:#444444;color:#bec1c4; border-style:none; margin:0px 0px 0px 0px;width: 120px; height: 40px;" type="number" >
-                        </span>
-                        <div class="timer_div" style="margin:0px 26px 20px 26px;">
-                            <button type="reset" id="resettimer">RESET</button>
-                            <button type="submit" id="timer" >START TIMER</button>
-                        </div>
-                    </div>
-                </div>-->
-
                 <div id="config_section" class="othersettings_form" style="background-color:#1a1a1a;text-align: left; margin-top: 6px;border-style:solid; border-color: #3c3e3f;border-radius: 12px; border-width: 1px;">     
-                    <button type="button" class="collapsible" style="padding:18px 10px 18px 26px; width: 100%;">Other Settings</button>
-                    <div class="content">
-                        <!--<h3 style="margin:18px 10px 18px 26px;">Other Settings</h3>-->
-                        <p style="font-size: 16px; margin:0px 0px 4px 26px;">Configuration data</p>
-                        <div class="two_buttons">
-                            <button type="submit" id="deleteconf_id" value="0">DELETE</button>
-                            <button type="submit" id="saveconf_id" value="1" style=" color:#51A0DB;background-color: #1440616e;border-color: #51A0DB;">SAVE</button>
-                        </div>
+                    <h3 style="margin:18px 10px 8px 26px;">Configuration</h3>
+                    <p style="font-size: 16px; margin:0px 0px 4px 26px;">Configuration data</p>
+                    <div class="two_buttons">
+                        <button type="submit" id="deleteconf_id" value="0">DELETE</button>
+                        <button type="submit" id="saveconf_id" value="1" style=" color:#51A0DB;background-color: #1440616e;border-color: #51A0DB;">SAVE</button>
                     </div>
-                </div>
-
-                <div id="uptime_section" class="othersettings_form" style="background-color:#1a1a1a;text-align: left; margin-top: 6px;border-style:solid; border-color: #3c3e3f;border-radius: 12px; border-width: 1px;">
-                    <label style="display: flex; align-items: center; ">
-                            <h3 style="font-size:17px; margin:10px 0px 10px 26px;">Uptime:</h3>
-                            <p id="upt_dd" style="margin:10px 0px 10px 6px;">0</p> 
-                            <p style="margin:10px 0px 10px 6px;">days,</p>
-                            <p id="upt_hh" style="margin:10px 0px 10px 6px;">0</p> 
-                            <p style="margin:10px 0px 10px 6px;">hrs,</p>
-                            <p id="upt_mm" style="margin:10px 0px 10px 6px;">0</p> 
-                            <p style="margin:10px 0px 10px 6px;">min</p>
-                    </label>
-                    <!--<label style="display: flex; align-items: center; ">
-                    <p style="margin:0px 0px 10px 26px;">Active since: </p>
-                    <p id="started" style="margin:0px 0px 10px 6px;">?</p> 
-                    </label>-->
                 </div>
           
-            <p style="font-weight:450 ; background: linear-gradient(45deg,#a270ff,#ff0f3b);background-clip: text; margin: 4px 12px 0px 12px; ; color: transparent;">ESPclock v2.2 • A project by <strong>telepath</strong></p>
+            <p style="font-weight:450 ; background: linear-gradient(45deg,#a270ff,#ff0f3b);background-clip: text; margin: 4px 12px 0px 12px; ; color: transparent;">ESPclock v2.2 • A project by <strong>telepath</strong> & <strong>nltimv</strong></p>
     </div>
                
 <svg style="display: none;">
@@ -590,6 +612,15 @@ width: 100%;
     </symbol>
 </svg>
 
+<dialog id="del_confirm_dlg">
+    <p style="margin:0px; font-size:15px;">Delete saved configuration?</p>
+    <p style="margin:8px 0px 0px 0px; color:#adb5bd; font-size:13px;">This removes saved settings and disconnects WiFi.</p>
+    <div class="dlg_actions">
+        <button type="button" id="del_confirm_no">CANCEL</button>
+        <button type="button" id="del_confirm_yes">DELETE</button>
+    </div>
+</dialog>
+
 <script>
     let network_list;
     let ap_ssid = "";
@@ -598,7 +629,6 @@ width: 100%;
     const ntp_section = document.getElementById("ntp_section");
     const display_section = document.getElementById("display_section");
     const config_section = document.getElementById("config_section");
-    const uptime_section = document.getElementById("uptime_section");
     function networkFetch(json_path_or_route){
         
             fetch(json_path_or_route)
@@ -728,6 +758,7 @@ width: 100%;
     //onload() is mandatory, otherwise won't run the 1st fetch
     //it activates when server.on("/") function is called
     window.onload = function () {        
+        //networkFetch("/scan");        
 
         //check device mode and update UI accordingly
         fetch("/uicheck")
@@ -742,7 +773,6 @@ width: 100%;
                 ntp_section.style.display = "none";
                 display_section.style.display = "none";
                 config_section.style.display = "none";
-                uptime_section.style.display = "none";
                 networkFetch("/scan");
             } else {
                 //normal mode: hide WiFi section
@@ -756,6 +786,18 @@ width: 100%;
                     bright_auto.setAttribute("checked", "");
                 }
 
+                if(data.ntp){
+                    document.getElementById("ntp_id").value = data.ntp;
+                }
+
+                if(data.tz){
+                    const tz_select = document.getElementById("tz_select");
+                    const has_option = Array.from(tz_select.options).some(option => option.value === data.tz);
+                    if(has_option){
+                        tz_select.value = data.tz;
+                    }
+                }
+
                 if(data.blink === false){
                     blink.removeAttribute("checked", "");
                 }
@@ -764,7 +806,6 @@ width: 100%;
                     twelve.setAttribute("checked", "");
                 }
 
-                msToUptime(data.millis, data.msovfl);
                 if(data.config===0){
                     disable_button(deleteconf, "#1a1a1a","#9c9c9c", "#4E4E56");
                     enable_button(saveconf, "#1440616e", "#51A0DB", "#51A0DB");
@@ -807,6 +848,13 @@ width: 100%;
     const useshift = document.getElementById("useopen");
 
     const popup_span_elem = document.getElementById("myPopup");   //for popup message
+    const wifi_fields = document.getElementById("wifi_fields");
+    const wifi_connected_msg = document.getElementById("wifi_connected_msg");
+    const wifi_connected_text = document.getElementById("wifi_connected_text");
+    const wifi_connected_info = document.getElementById("wifi_connected_info");
+    const wifi_tz_setup = document.getElementById("wifi_tz_setup");
+    const wifi_final_msg = document.getElementById("wifi_final_msg");
+    const setup_tz_btn = document.getElementById("setup_tz_btn");
 
       //password toggle
       buttoneye.onclick = function(){
@@ -832,6 +880,8 @@ width: 100%;
       //to know if i'm connected to wifi
       let polling_state= false;
       let connected = false;
+      let setup_ip = "";
+      let setup_mdns = "";
       const ascii_anim = ["⚫  ⚪  ⚪", "⚪  ⚫  ⚪", "⚪  ⚪  ⚫"];
 
       //--------------------------------x
@@ -872,15 +922,13 @@ width: 100%;
                                     connected = true;
 
                                     clearInterval(asciivar);
-                                    connect_but.innerHTML = "CONNECTED";
-                                    connect_but.style.backgroundColor ="#52885d";
 
-                                    popup_span_elem.innerHTML = "CONNECTED ✅<br>IP: <strong>" + data.ip + "</strong><br>Available at: <strong>" + data.mdns + ".local</strong><br>Reconnect to your WiFi network to access settings.";
-                                    popup_span_elem.classList.add("show");
+                                    setup_ip = data.ip;
+                                    setup_mdns = data.mdns;
 
-                                    setTimeout(()=>{
-                                        popup_span_elem.classList.remove("show");
-                                    }, 15000);     //matches AP shutdown grace period
+                                    wifi_fields.style.display = "none";
+                                    wifi_connected_info.innerHTML = "✅ Connected!";
+                                    wifi_connected_msg.style.display = "";
                             }
                                 
                                 else if(data.stat==="fail" ){
@@ -952,20 +1000,37 @@ width: 100%;
                 }
             }
 
+            setup_tz_btn.onclick = function(){
+                const tz_chosen = document.getElementById("setup_tz_select").value;
+                fetch("/setup_timezone", {
+                    method: "POST",
+                    headers: { 'Content-Type': "application/json" },
+                    body: JSON.stringify({"tz": tz_chosen})
+                })
+                .then(response => response.json())
+                .then(() => {
+                    wifi_tz_setup.style.display = "none";
+                    wifi_connected_text.innerHTML = "⏰ Setup complete!<br><br>"
+                        + "IP: <strong><a href='http://" + setup_ip + "' style='color:#6e9cd1;'>http://" + setup_ip + "</a></strong><br>"
+                        + "Available at: <strong><a href='http://" + setup_mdns + ".local' style='color:#6e9cd1;'>http://" + setup_mdns + ".local</a></strong><br><br>"
+                        + "Reconnect to your Wi-Fi network to access settings.";
+                    wifi_final_msg.style.display = "";
+                });
+            }
+
 
             update_but.onclick = function(){
 
                 const ntp_input = document.getElementById("ntp_id");
                 let ntp_by_user = ntp_input.value;
 
-                let offset_by_user = document.getElementById("gmt_offset").value;
-                
-                if(offset_by_user > 12 || offset_by_user < -12){
-                     alert("🔴GMT/UTC Offset must be a number from -12 to +12!!");
+                const tz_by_user = document.getElementById("tz_select").value;
+
+                if(!ntp_by_user || ntp_by_user.trim().length === 0){
+                    ntp_by_user = "pool.ntp.org";
                 }
 
-                else{
-                //console.log("NTP addr: ", ntp_by_user, "Offset:", offset_by_user);
+                //console.log("NTP addr: ", ntp_by_user, "TZ:", tz_by_user);
 
                     fetch("/updatetime", {
                         method: "POST",
@@ -974,9 +1039,8 @@ width: 100%;
                         },
 
                         //puts ntp data in json format, inside http POST req body
-                        body: JSON.stringify({"ntp_addr": ntp_by_user , "offset": offset_by_user })
+                        body: JSON.stringify({"ntp_addr": ntp_by_user , "tz": tz_by_user })
                     })
-                }
             }
 
             //onChange() event is used for SLIDER
@@ -1075,91 +1139,11 @@ for (i = 0; i < coll.length; i++) {
   });
 }
 
-//--------------------------------------Alarm 
-/*
-let mon = document.getElementById("mon");
-let tue = document.getElementById("tue");
-let wed = document.getElementById("wed");
-let thu = document.getElementById("thu");
-let fri = document.getElementById("fri");
-let sat = document.getElementById("sat");
-let sun = document.getElementById("sun");
-
-function days_handler(){
-    if(this.value ==="0" ){
-        this.style.backgroundColor = "#ae0423";
-        this.setAttribute("value", "1"); 
-    }
-    else{
-        this.style.backgroundColor = "#444444";
-        this.setAttribute("value", "0"); 
-    }
-}
-
-mon.addEventListener("click", days_handler);
-tue.addEventListener("click", days_handler);
-wed.addEventListener("click", days_handler);
-thu.addEventListener("click", days_handler);
-fri.addEventListener("click", days_handler);
-sat.addEventListener("click", days_handler);
-sun.addEventListener("click", days_handler);
-
-const al_time = document.getElementById("alarm_time");
-const snooze = document.getElementById("snooze");
-//const ringtone = document.getElementById("");
-
-const setalarm = document.getElementById("setalarm_id");
-const deletealarm= document.getElementById("deletealarm_id");
-
-function edit_alarm(){
-
-    fetch("/alarm", {     dont delete!!
-                    method: "POST",
-                    headers: {
-                        'Content-Type': "application/json"
-                    },            
-       body: JSON.stringify({"set": ((this.value == 1) ? true : false), "hh": ore, "mm":minuti, "dd": giorni, "snz":  snooze}) //sends the value of the button that calls the function 
-    })
-
-                    
-    if(this.value == 0){
-        disable_button(deletealarm, "#1a1a1a","#9c9c9c", "#4E4E56");
-
-        fetch("/alarm", {
-            method: "POST",
-            headers: {
-                'Content-Type': "application/json"
-            },            
-            body: JSON.stringify({"set": false}) //sends the value of the button that calls the function 
-        })      
-      
-        enable_button(setalarm, "#ae63e427", "#AF63E4", "#AF63E4");
-        setalarm.innerText = "SET ALARM";            
-    }
-
-    //if user saves config, deleteconf button is enabled
-    else{   
-        disable_button(setalarm, "#1a1a1a","#9c9c9c", "#4E4E56"); 
-        setalarm.innerText = "ALARM SET"; 
-        enable_button(deletealarm, "#740c0c45", "#BA1E16", "#BA1E16"); 
-        
-        fetch("/alarm", {
-            method: "POST",
-            headers: {
-                'Content-Type': "application/json"      //brocco
-            },            //snooze better as input type number 
-            body: JSON.stringify({"set": true, "time": al_time.value , "dd": giorni, "snz":  snooze.value}) //sends the value of the button that calls the function 
-        })
-
-        
-    } 
-        
-}
-setalarm.addEventListener("click", edit_alarm);
-deletealarm.addEventListener("click", edit_alarm);*/
-
 //-----------------------------------------Configuration
             const saveconf = document.getElementById("saveconf_id");
+            const del_confirm_dlg = document.getElementById("del_confirm_dlg");
+            const del_confirm_yes = document.getElementById("del_confirm_yes");
+            const del_confirm_no = document.getElementById("del_confirm_no");
             //deleteconf reference is up
 
             //this must be called ONLY from saveconf and deleteconf buttons!!
@@ -1184,7 +1168,9 @@ deletealarm.addEventListener("click", edit_alarm);*/
                     ntp_section.style.display = "none";
                     display_section.style.display = "none";
                     config_section.style.display = "none";
-                    uptime_section.style.display = "none";
+
+                    wifi_connected_msg.style.display = "none";
+                    wifi_fields.style.display = "";
 
                     popup_span_elem.innerHTML = "Config deleted. Connect to '" + ap_ssid + "' WiFi to reconfigure.";
                     popup_span_elem.classList.add("show");
@@ -1195,11 +1181,28 @@ deletealarm.addEventListener("click", edit_alarm);*/
                     saveconf.innerText = "SAVED"; 
 
                     enable_button(deleteconf, "#740c0c45", "#BA1E16", "#BA1E16");
+
+                    setTimeout(() => {
+                        enable_button(saveconf, "#1440616e", "#51A0DB", "#51A0DB");
+                        saveconf.innerText = "UPDATE";
+                    }, 1500);
                 }
             }
            
             saveconf.addEventListener("click", edit_conf);
-            deleteconf.addEventListener("click", edit_conf);
+            deleteconf.addEventListener("click", function(event){
+                event.preventDefault();
+                del_confirm_dlg.showModal();
+            });
+
+            del_confirm_yes.addEventListener("click", function(){
+                del_confirm_dlg.close();
+                edit_conf.call(deleteconf);
+            });
+
+            del_confirm_no.addEventListener("click", function(){
+                del_confirm_dlg.close();
+            });
 
 </script>      
 </body>

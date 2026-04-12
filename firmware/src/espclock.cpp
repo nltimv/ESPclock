@@ -1,4 +1,4 @@
-// ESPclock - ESP32 TM1652 display firmware (main entry point)
+// ESPclock - Unified firmware main entry point
 // This file is part of the ESPclock project fork by nltimv.
 // Originally written by telepath9 (https://github.com/telepath9/ESPclock)
 // Licensed under the GNU General Public License v3.0 (GPL-3.0)
@@ -6,9 +6,20 @@
 //
 // This file has been modified by nltimv (https://github.com/nltimv).
 
+// This single source file covers all three build environments defined in
+// platformio.ini (ESP8266 + TM1637, ESP32 + TM1637, ESP32 + TM1652).
+// Platform-specific behaviour is isolated to two #ifdef ESP8266 guards.
+
 #include <Arduino.h>
+
+#ifdef ESP8266
+#include <ESP8266WiFi.h>
+#include <ESP8266mDNS.h>
+#else  // ESP32
 #include <WiFi.h>
 #include <ESPmDNS.h>
+#endif
+
 #include <LittleFS.h>
 
 #include "display.h"
@@ -67,7 +78,9 @@ void setup() {
 
 // ── loop() ────────────────────────────────────────────────────────────────
 void loop() {
-    // Note: ESP32 mDNS does not require periodic update() calls
+#ifdef ESP8266
+    MDNS.update();   // ESP8266 requires periodic mDNS polling; ESP32 does not
+#endif
 
     // Shut down AP after the setup-mode grace period (15 s)
     if (ap_shutdown_pending && (millis() - ap_shutdown_start) >= 15000UL) {
@@ -75,7 +88,7 @@ void loop() {
         ap_shutdown_pending = false;
     }
 
-    // Perform a deferred WiFi rescan when requested by the /scan or /refresh handler
+    // Perform a deferred WiFi rescan when requested by /scan or /refresh
     if (newScan) {
         wifiScan();
         newScan = false;

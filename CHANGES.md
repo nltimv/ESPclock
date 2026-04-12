@@ -8,6 +8,34 @@ The following changes have been made in this fork by
 
 ---
 
+## 2026-04-12
+
+### Unified display driver and single PlatformIO project (`firmware/`, `lib/espclock_common/`)
+- Removed the three separate per-variant PlatformIO projects
+  (`esp8266/tm1637_display/`, `esp32/tm1637_display/`, `esp32/tm1652_display/`)
+  and replaced them with a single unified project at `firmware/`.
+- `firmware/platformio.ini` — one config, three build environments:
+  - `d1_mini_tm1637` — ESP8266 Wemos D1 Mini + TM1637 display
+  - `esp32dev_tm1637` — ESP32 DevKit + TM1637 display
+  - `esp32dev_tm1652` — ESP32 DevKit + TM1652 display
+  - Common settings (`monitor_speed`, `framework`, `board_build.filesystem`,
+    `lib_extra_dirs`) live in the shared `[env]` base section and are
+    inherited by all environments without repetition.
+  - Display type and pin assignments are selected via `build_flags`
+    (`-D DISPLAY_TM1637 -D DISPLAY_CLK=<pin> -D DISPLAY_DIO=<pin>` or
+     `-D DISPLAY_TM1652 -D DISPLAY_DATA_PIN=<pin> -D DISPLAY_DIGITS=<n>`).
+- `firmware/src/espclock.cpp` — single main file covering all three variants;
+  the only platform-specific code is `MDNS.update()` behind `#ifdef ESP8266`.
+- `firmware/data/index.html` — single shared web UI (previously duplicated
+  in each variant's own `data/` directory).
+- `lib/espclock_common/src/display.h` / `display.cpp` — unified display
+  driver; `myTimer()` and display-state globals defined once; TM1637 and
+  TM1652 chip-specific code in `#if defined(DISPLAY_TM1637)` /
+  `#elif defined(DISPLAY_TM1652)` blocks.  A build-time `#error` fires if
+  neither flag is set, preventing silent misconfiguration.
+
+---
+
 ## 2026-04-09
 
 ### Shared firmware library and ESP32 code merge (`lib/espclock_common/`, `esp32/`)
