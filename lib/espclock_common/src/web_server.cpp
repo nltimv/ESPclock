@@ -29,9 +29,19 @@ static void notFound(AsyncWebServerRequest *request) {
     request->send(404, "text/plain", "NOT FOUND");
 }
 
+static void addFinderCorsHeaders(AsyncWebServerResponse *response) {
+    // /uicheck exposes only read-only, non-sensitive status data (brightness,
+    // timezone, AP SSID, etc.), so a wildcard origin is safe here.  This lets
+    // the finder app work regardless of where it is hosted (local dev server,
+    // public HTTPS domain, etc.).
+    response->addHeader("Access-Control-Allow-Origin",  "*");
+    response->addHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+    response->addHeader("Access-Control-Allow-Headers", "Content-Type");
+    response->addHeader("Access-Control-Max-Age",       "86400");
+}
+
 // ── Route registration ─────────────────────────────────────────────────────
 void setupRoutes() {
-
     // Root – serve the single-page web UI
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
         request->send(LittleFS, "/index.html", "text/html");
@@ -59,7 +69,16 @@ void setupRoutes() {
 
         String uc_str;
         serializeJson(uicheck_json, uc_str);
-        request->send(200, "application/json", uc_str);
+        AsyncWebServerResponse *response = request->beginResponse(200, "application/json", uc_str);
+        addFinderCorsHeaders(response);
+        request->send(response);
+    });
+
+    // Preflight support for finder app CORS requests
+    server.on("/uicheck", HTTP_OPTIONS, [](AsyncWebServerRequest *request) {
+        AsyncWebServerResponse *response = request->beginResponse(204);
+        addFinderCorsHeaders(response);
+        request->send(response);
     });
 
     // Return the cached network list (and schedule a fresh scan)

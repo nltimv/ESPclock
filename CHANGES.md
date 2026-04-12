@@ -10,6 +10,102 @@ The following changes have been made in this fork by
 
 ## 2026-04-12
 
+### Simplified manual mode UI (`device-finder/site/index.html`)
+- Reduced the manual mode homepage to just a Device ID field and a **Connect**
+  button.  The Connect button tries mDNS first and then auto-scans the
+  WebRTC-detected subnet (same fast path as deep-link mode).
+- Moved the subnet prefix, host range, concurrency inputs and the individual
+  "Find via mDNS" / "Scan subnet" buttons into a collapsed `<details>` section
+  labelled "Advanced options", keeping the interface clean for typical users.
+
+### Auto-detect subnet and scan automatically (`device-finder/site/index.html`)
+- Added WebRTC-based local IP detection (`detectLocalIp()`) that discovers the
+  phone's/computer's LAN IP address without any user input.  The subnet prefix
+  is extracted and used for automatic scanning.
+- Deep-link mode now runs an automatic subnet scan (step 3) between the AP
+  probe and showing the fallback UI, **only** when WebRTC detection succeeds
+  (single subnet, 32 parallel probes, 400 ms timeout — completes in ~3–5 s).
+  When detection fails, the scan is skipped entirely and the fallback UI is
+  shown immediately, avoiding a multi-minute wait from blind subnet guessing.
+- The fallback subnet-scan input is pre-filled with the detected prefix.
+- Manual mode also auto-detects and pre-fills the subnet prefix field on load.
+
+### Removed captive portal (`lib/espclock_common/src/wifi_manager.*`, `web_server.cpp`, `src/espclock.cpp`)
+- Removed the DNS-based captive portal (`DNSServer`, `startCaptivePortal()`,
+  `stopCaptivePortal()`, the `notFound` redirect, and all `loop()` lifecycle
+  calls).  On Android, the captive-portal browser sheet closes as soon as the
+  ESP connects to a real Wi-Fi network during setup, preventing the user from
+  completing timezone configuration.  The device-finder app's browser-based AP
+  polling handles the redirect in a normal browser tab instead, which is not
+  affected by network-state changes.
+
+### Unified single-QR setup & settings UX with AP polling (`device-finder/site/index.html`)
+- Redesigned the device-finder deep-link flow so that a **single URL QR code**
+  (e.g. `https://espclock.example.com/d/<ID>`) handles both first-time setup
+  and day-to-day settings changes.  The same URL/NFC tag works in both
+  scenarios:
+  - **Device already configured:** mDNS probe finds it → auto-redirect to
+    control panel (one scan, zero extra steps).
+  - **Device in setup mode:** probes fail → page shows Wi-Fi connection
+    instructions (inline Wi-Fi QR, NFC tap, or manual credentials) → user
+    connects to AP → captive portal opens setup UI automatically.
+- Added **background AP polling** (`192.168.4.1/uicheck` every 3 s) that
+  detects when the user's phone has joined the device AP and auto-redirects to
+  the setup page.  Provides continuous visual feedback via a "Waiting for
+  device…" spinner.
+- Added **escalating hints**: after ~30 seconds of unsuccessful polling, a
+  warning appears prompting the user to verify that the clock is powered on
+  and showing its ready animation.
+- Removed the separate "First-Time Setup" card and "Setup link (AP mode)"
+  button from the manual page — the deep-link route now handles all scenarios.
+- Wi-Fi connection instructions now mention **NFC tag** as a connection method
+  alongside QR and manual credentials.
+- Subnet scan moved to an "Already set up? Find it on your network" collapsible
+  section for users whose device is configured but not discoverable via mDNS.
+
+### Fix CORS on `/uicheck` for publicly-hosted finder app (`lib/espclock_common/src/web_server.cpp`)
+- Changed `Access-Control-Allow-Origin` on `GET /uicheck` and `OPTIONS /uicheck`
+  from a private/local-origin allowlist to `*`.  The endpoint is read-only and
+  exposes no credentials, so a wildcard is safe and is required for the finder
+  app to work when hosted at a public HTTPS URL (e.g.
+  `https://espclock.example.com`).  The previous origin-specific logic blocked
+  all public origins, causing the "CORS header missing" browser error.
+
+### Deep-link auto-discovery mode and shareable link generator (`device-finder/site/index.html`)
+- Added path-based deep-link routing: `https://<finder-host>/d/<DEVICE_ID>`
+  auto-discovers the device and redirects the browser to its control panel.
+  Scan a QR code containing this URL (generated with any external QR tool) to open
+  the device without knowing its IP address.
+- Discovery sequence on deep-link load:
+  1. mDNS probe (`http://espclock-<DEVICE_ID>.local/uicheck`)
+  2. AP address probe (`http://192.168.4.1/uicheck`)
+  3. Subnet scan fallback displayed in the page when both fast probes fail
+- Auto-redirect fires after a 700 ms confirmation delay; a manual
+  "Open Control Panel" button is also shown as a fallback.
+- Added "Generate Shareable Deep Link" card in the manual mode: enter a
+  `DEVICE_ID` to receive the `<origin>/d/<DEVICE_ID>` URL ready to copy and
+  paste into any QR code generator.
+- QR code generation is intentionally not built into the app; only the deep-link
+  URL is produced.
+- The existing NGINX `try_files` rule already handles `/d/*` paths correctly
+  — no NGINX changes were needed.
+
+### Central device finder app and cross-origin discovery support (`device-finder/`, `lib/espclock_common/src/web_server.cpp`)
+- Added a new centrally-hostable static web app (`device-finder/site/index.html`)
+  that:
+  - accepts `DEVICE_ID`,
+  - tries mDNS deep links (`http://espclock-<DEVICE_ID>.local`),
+  - scans a user-selected `/24` subnet by calling `/uicheck` to find the
+    matching `ESPclock-<DEVICE_ID>` AP identity,
+  - generates a QR code for the discovered deep link on the client side,
+  - supports setup-mode deep-link flow using `http://192.168.4.1/` when the
+    client is connected to the device AP.
+- Added `device-finder/Dockerfile` and `device-finder/nginx/default.conf` to
+  host the finder app with NGINX.
+- Added selective CORS handling on `/uicheck` so finder pages hosted on
+  localhost, private-network IPs, or `.local` origins can query device status
+  cross-origin without exposing it to arbitrary public origins.
+
 ### `lib/espclock_common/src/tz_lookup.h` + `tz_lookup.cpp`: New IANA→POSIX lookup — reads from `tz.json`
 - New header `tz_lookup.h` declares `const char* tzLookup(const char* ianaName)`.
 - `tz_lookup.cpp` opens `/tz.json` from LittleFS at call time and uses ArduinoJson's
