@@ -29,48 +29,15 @@ static void notFound(AsyncWebServerRequest *request) {
     request->send(404, "text/plain", "NOT FOUND");
 }
 
-static bool isTrustedFinderOrigin(const String &origin) {
-    if (!(origin.startsWith("http://") || origin.startsWith("https://"))) return false;
-
-    String hostPart = origin;
-    int    schemeIx = hostPart.indexOf("://");
-    if (schemeIx >= 0) hostPart = hostPart.substring(schemeIx + 3);
-    int slashIx = hostPart.indexOf('/');
-    if (slashIx >= 0) hostPart = hostPart.substring(0, slashIx);
-    int colonIx = hostPart.indexOf(':');
-    if (colonIx >= 0) hostPart = hostPart.substring(0, colonIx);
-    bool localDomainOrigin = hostPart.endsWith(".local");
-
-    if (origin.startsWith("http://localhost") || origin.startsWith("https://localhost") ||
-        origin.startsWith("http://127.") || origin.startsWith("https://127.") ||
-        origin.startsWith("http://192.168.") || origin.startsWith("https://192.168.") ||
-        origin.startsWith("http://10.") || origin.startsWith("https://10.") ||
-        localDomainOrigin) {
-        return true;
-    }
-
-    // RFC1918 private range 172.16.0.0/12 spans 172.16.x.x through 172.31.x.x.
-    for (uint8_t i = 16; i <= 31; i++) {
-        String httpPrefix  = "http://172." + String(i) + ".";
-        String httpsPrefix = "https://172." + String(i) + ".";
-        if (origin.startsWith(httpPrefix) || origin.startsWith(httpsPrefix)) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-static void addFinderCorsHeaders(AsyncWebServerRequest *request, AsyncWebServerResponse *response) {
-    if (!request->hasHeader("Origin")) return;
-    String origin = request->header("Origin");
-    if (!isTrustedFinderOrigin(origin)) return;
-
-    response->addHeader("Access-Control-Allow-Origin", origin);
+static void addFinderCorsHeaders(AsyncWebServerResponse *response) {
+    // /uicheck exposes only read-only, non-sensitive status data (brightness,
+    // timezone, AP SSID, etc.), so a wildcard origin is safe here.  This lets
+    // the finder app work regardless of where it is hosted (local dev server,
+    // public HTTPS domain, etc.).
+    response->addHeader("Access-Control-Allow-Origin",  "*");
     response->addHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
     response->addHeader("Access-Control-Allow-Headers", "Content-Type");
-    response->addHeader("Access-Control-Max-Age", "86400");
-    response->addHeader("Vary", "Origin");
+    response->addHeader("Access-Control-Max-Age",       "86400");
 }
 
 // ── Route registration ─────────────────────────────────────────────────────
@@ -103,14 +70,14 @@ void setupRoutes() {
         String uc_str;
         serializeJson(uicheck_json, uc_str);
         AsyncWebServerResponse *response = request->beginResponse(200, "application/json", uc_str);
-        addFinderCorsHeaders(request, response);
+        addFinderCorsHeaders(response);
         request->send(response);
     });
 
     // Preflight support for finder app CORS requests
     server.on("/uicheck", HTTP_OPTIONS, [](AsyncWebServerRequest *request) {
         AsyncWebServerResponse *response = request->beginResponse(204);
-        addFinderCorsHeaders(request, response);
+        addFinderCorsHeaders(response);
         request->send(response);
     });
 

@@ -10,6 +10,14 @@ The following changes have been made in this fork by
 
 ## 2026-04-12
 
+### Fix CORS on `/uicheck` for publicly-hosted finder app (`lib/espclock_common/src/web_server.cpp`)
+- Changed `Access-Control-Allow-Origin` on `GET /uicheck` and `OPTIONS /uicheck`
+  from a private/local-origin allowlist to `*`.  The endpoint is read-only and
+  exposes no credentials, so a wildcard is safe and is required for the finder
+  app to work when hosted at a public HTTPS URL (e.g.
+  `https://espclock.example.com`).  The previous origin-specific logic blocked
+  all public origins, causing the "CORS header missing" browser error.
+
 ### Deep-link auto-discovery mode and shareable link generator (`device-finder/site/index.html`)
 - Added path-based deep-link routing: `https://<finder-host>/d/<DEVICE_ID>`
   auto-discovers the device and redirects the browser to its control panel.
