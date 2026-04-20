@@ -10,10 +10,19 @@ The following changes have been made in this fork by
 
 ## 2026-05-18
 
+
 ### Device identity defaults (`lib/espclock_common/src/wifi_manager.*`, `src/espclock.cpp`, `platformio.ini`)
 - Changed the default `DEVICE_ID` behavior to generate a deterministic ID from the hardware MAC address, so reflashing the same board keeps the same identity without manual build flags.
 - Reduced the default MAC-derived `DEVICE_ID` to the last 6 hexadecimal characters for shorter AP/mDNS names.
 - Kept `DEVICE_ID` build-flag override support for users who still want custom IDs.
+
+### Offline/online operation and touch control (`src/espclock.cpp`, `lib/espclock_common/src/wifi_manager.*`, `lib/espclock_common/src/web_server.cpp`, `platformio.ini`)
+- Repurposed setup/normal behavior into offline/online modes, with offline AP availability limited to a 15-minute boot window and default clock start at 00:00.
+- Added TTP223 touch interactions for date peek, local time/date setup (hours, minutes, 12/24h, year, day, month), and an online-mode long-hold reset back to offline mode.
+- Added online reset flow feedback on long hold and aligned config-reset handling to consistently return the device to offline onboarding mode.
+
+### Web UI wording (`data/index.html`)
+- Updated setup-related labels/messages to use clearer offline/online language for non-technical users.
 
 ---
 

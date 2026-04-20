@@ -422,7 +422,7 @@ width: 100%;
         <h2 style="margin: 8px 0px 8px 0px;">ESPclock</h2>
         <form id="wifi_section" style=" background-color: #1a1a1a; text-align: left;border-style:solid; border-color:#3c3e3f;border-radius: 12px; border-width: 1px;">
             
-                <h3 style="margin: 18px 0px 18px 26px;">WiFi Settings</h3>
+                <h3 style="margin: 18px 0px 18px 26px;">Offline Mode Setup</h3>
                 <div id="wifi_fields">
                 <p id="tip1" style="font-size:14px; margin: 0px 26px 18px 26px; color:#6e9cd1;"></p>
                 <label style="margin-left: 26px;" for="ssid_list">Available networks</label>
@@ -782,15 +782,15 @@ width: 100%;
 
             if(data.ap_ssid) ap_ssid = data.ap_ssid;
 
-            //show/hide sections based on setup_mode
+            //show/hide sections based on offline/online mode
             if(data.setup_mode){
-                //setup mode: show only WiFi section
+                //offline mode: show only WiFi section
                 ntp_section.style.display = "none";
                 display_section.style.display = "none";
                 config_section.style.display = "none";
                 networkFetch("/scan");
             } else {
-                //normal mode: hide WiFi section
+                //online mode: hide WiFi section
                 wifi_section.style.display = "none";
 
                 br_tag.innerText = data.bright;
@@ -1024,7 +1024,7 @@ width: 100%;
                     wifi_connected_text.innerHTML = "⏰ Setup complete!<br><br>"
                         + "IP: <strong><a href='http://" + setup_ip + "' style='color:#6e9cd1;'>http://" + setup_ip + "</a></strong><br>"
                         + "Available at: <strong><a href='http://" + setup_mdns + ".local' style='color:#6e9cd1;'>http://" + setup_mdns + ".local</a></strong><br><br>"
-                        + "Reconnect to your Wi-Fi network to access settings.";
+                        + "Reconnect to your Wi-Fi network to enter online mode settings.";
                     wifi_final_msg.style.display = "";
                 });
             }
@@ -1171,7 +1171,7 @@ for (i = 0; i < coll.length; i++) {
                     body: JSON.stringify({"save": ((this.value == 1) ? true : false)}) //sends the value of the button that calls the function 
                 })
 
-                //config deleted: switch to setup mode UI
+                //config deleted: switch to offline mode UI
                 if(this.value == 0){    
 
                     //show WiFi section, hide settings sections
@@ -1183,7 +1183,7 @@ for (i = 0; i < coll.length; i++) {
                     wifi_connected_msg.style.display = "none";
                     wifi_fields.style.display = "";
 
-                    popup_span_elem.innerHTML = "Config deleted. Connect to '" + ap_ssid + "' WiFi to reconfigure.";
+                    popup_span_elem.innerHTML = "Online settings reset. Connect to '" + ap_ssid + "' WiFi to set up again.";
                     popup_span_elem.classList.add("show");
                     setTimeout(()=>{ popup_span_elem.classList.remove("show"); }, 8000);
                 }
