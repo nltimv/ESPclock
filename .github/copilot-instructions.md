@@ -89,6 +89,8 @@ to anyone who receives a binary.  Concretely:
 Every non-trivial change introduced in this fork must be recorded in
 [CHANGES.md](../CHANGES.md) under a dated heading.  This satisfies the GPL-3.0
 requirement to clearly mark modifications.  Follow the existing format:
+keep entries at a high level (like current `CHANGES.md` entries), and avoid
+low-level implementation detail or step-by-step notes.
 
 ```markdown
 ## YYYY-MM-DD
