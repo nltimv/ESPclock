@@ -8,6 +8,18 @@ The following changes have been made in this fork by
 
 ---
 
+## 2026-04-20
+
+### Offline/online operation and touch control (`src/espclock.cpp`, `lib/espclock_common/src/wifi_manager.*`, `lib/espclock_common/src/web_server.cpp`, `platformio.ini`)
+- Repurposed setup/normal behavior into offline/online modes, with offline AP availability limited to a 15-minute boot window and default clock start at 00:00.
+- Added TTP223 touch interactions for date peek, local time/date setup (hours, minutes, 12/24h, year, day, month), and an online-mode long-hold reset back to offline mode.
+- Added online reset flow feedback on long hold and aligned config-reset handling to consistently return the device to offline onboarding mode.
+
+### Web UI wording (`data/index.html`)
+- Updated setup-related labels/messages to use clearer offline/online language for non-technical users.
+
+---
+
 ## 2026-04-12
 
 ### Setup and discovery user experience (`device-finder/site/index.html`)

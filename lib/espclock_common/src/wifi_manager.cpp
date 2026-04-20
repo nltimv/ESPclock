@@ -178,3 +178,21 @@ void checkConfig() {
 
     fld.close();
 }
+
+void switchToOfflineMode(bool clearConfig) {
+    if (clearConfig && LittleFS.exists("/config.json")) {
+        LittleFS.remove("/config.json");
+    }
+
+    WiFi.disconnect();
+    connected           = false;
+    creds_available     = false;
+    start_NtpClient     = false;
+    attempts            = 0;
+    setup_mode          = true;
+    ap_shutdown_start   = millis();
+    ap_shutdown_pending = true;
+
+    WiFi.mode(WIFI_AP_STA);
+    WiFi.softAP(esp_ssid, esp_password, false, 2);
+}

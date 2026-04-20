@@ -26,11 +26,11 @@ extern const char *password;
 extern bool creds_available;
 extern bool connected;
 
-// ── Setup / reconnection state ─────────────────────────────────────────────
+// ── Offline/online state ───────────────────────────────────────────────────
 extern bool          newScan;             // request a fresh network scan in loop()
 extern uint8_t       attempts;           // consecutive connection-attempt counter
-extern bool          setup_mode;         // true = no config saved yet
-extern unsigned long ap_shutdown_start;  // millis() snapshot for AP grace period
+extern bool          setup_mode;         // true = offline mode, false = online mode
+extern unsigned long ap_shutdown_start;  // millis() snapshot for AP window timer
 extern bool          ap_shutdown_pending; // true = AP shutdown timer is active
 
 // ── Functions ──────────────────────────────────────────────────────────────
@@ -45,3 +45,6 @@ void initMDNS();
 // Load /config.json from LittleFS and attempt to restore the saved WiFi
 // connection and display/NTP settings.
 void checkConfig();
+
+// Switch the device to offline mode. Optionally clears /config.json first.
+void switchToOfflineMode(bool clearConfig);
