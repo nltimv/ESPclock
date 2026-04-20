@@ -8,6 +8,13 @@ The following changes have been made in this fork by
 
 ---
 
+## 2026-04-20
+
+### Copilot contribution guidance (`.github/copilot-instructions.md`)
+- Clarified that `CHANGES.md` updates should stay high-level and aligned with the current changelog style, rather than including low-level implementation notes.
+
+---
+
 ## 2026-04-12
 
 ### Setup and discovery user experience (`device-finder/site/index.html`)
