@@ -10,7 +10,7 @@ The following changes have been made in this fork by
 
 ## 2026-04-12
 
-### Setup and discovery UX (`device-finder/site/index.html`)
+### Setup and discovery user experience (`device-finder/site/index.html`)
 - Improved the setup and discovery user experience by unifying first-time setup and daily access into a single deep-link flow with simpler screens and clearer guidance.
 - Added automatic local-network discovery (mDNS first, then subnet scan) and setup-mode detection so users can reach the device with fewer manual steps.
 
@@ -40,7 +40,7 @@ The following changes have been made in this fork by
 
 ## 2026-04-08
 
-### Setup completion UX (`esp32/tm1637_display`, `esp32/tm1652_display`, `esp8266/tm1637_display`)
+### Setup completion user experience (`esp32/tm1637_display`, `esp32/tm1652_display`, `esp8266/tm1637_display`)
 - Added direct IP and mDNS links after timezone setup so users can open the device UI faster.
 
 ---
