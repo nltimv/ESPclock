@@ -11,7 +11,7 @@
 #include <Arduino.h>
 
 // ── Device identity ────────────────────────────────────────────────────────
-// By default, a deterministic ID is generated from the device MAC address.
+// By default, a deterministic ID uses the last 6 hex chars of the MAC address.
 // Optional override at build time: build_flags = -D DEVICE_ID='"abcd"'
 extern const char *device_id;     // Device ID (default: MAC-derived)
 extern const char *esp_ssid;      // AP SSID  ("ESPclock-<DEVICE_ID>")
