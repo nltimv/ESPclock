@@ -8,6 +8,15 @@ The following changes have been made in this fork by
 
 ---
 
+## 2026-05-18
+
+### Device identity defaults (`lib/espclock_common/src/wifi_manager.*`, `src/espclock.cpp`, `platformio.ini`)
+- Changed the default `DEVICE_ID` behavior to generate a deterministic ID from the hardware MAC address, so reflashing the same board keeps the same identity without manual build flags.
+- Reduced the default MAC-derived `DEVICE_ID` to the last 6 hexadecimal characters for shorter AP/mDNS names.
+- Kept `DEVICE_ID` build-flag override support for users who still want custom IDs.
+
+---
+
 ## 2026-04-12
 
 ### Setup and discovery user experience (`device-finder/site/index.html`)

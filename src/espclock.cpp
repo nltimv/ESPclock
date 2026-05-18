@@ -63,6 +63,7 @@ void setup() {
     WiFi.mode(connected ? WIFI_STA : WIFI_AP_STA);
     WiFi.setAutoReconnect(true);
 
+    initDeviceIdentity();
     initMDNS();
     delay(100);
 
