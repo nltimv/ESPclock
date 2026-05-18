@@ -37,23 +37,34 @@ const char *tz_posix      = "UTC0";
 bool        start_NtpClient = false;
 struct tm   timeinfo;
 
-#ifndef TOUCH_PIN
+#ifndef SETUP_BUTTON_PIN
 #ifdef ESP8266
-#define TOUCH_PIN 14
+#define SETUP_BUTTON_PIN 14
 #else
-#define TOUCH_PIN 4
+#define SETUP_BUTTON_PIN 4
 #endif
 #endif
 
-#ifndef TOUCH_ACTIVE_STATE
-#define TOUCH_ACTIVE_STATE HIGH
+#ifndef ACTION_BUTTON_PIN
+#ifdef ESP8266
+#define ACTION_BUTTON_PIN 12
+#else
+#define ACTION_BUTTON_PIN 5
+#endif
+#endif
+
+#ifndef BUTTON_ACTIVE_STATE
+#define BUTTON_ACTIVE_STATE LOW
+#endif
+
+#ifndef BUTTON_PIN_MODE
+#define BUTTON_PIN_MODE INPUT_PULLUP
 #endif
 
 static const unsigned long AP_OFFLINE_WINDOW_MS  = 15UL * 60UL * 1000UL;
-static const unsigned long TOUCH_SHORT_PRESS_MS  = 80UL;
-static const unsigned long TOUCH_LONG_PRESS_MS   = 1200UL;
-static const unsigned long TOUCH_RESET_HINT_MS   = 5000UL;
-static const unsigned long TOUCH_RESET_HOLD_MS   = 10000UL;
+static const unsigned long BUTTON_DEBOUNCE_MS    = 35UL;
+static const unsigned long BUTTON_SHORT_PRESS_MS = 80UL;
+static const unsigned long BUTTON_LONG_PRESS_MS  = 1200UL;
 static const unsigned long DATE_VIEW_MS          = 3000UL;
 static const unsigned long EDIT_FLASH_MS         = 450UL;
 
@@ -74,10 +85,18 @@ static bool          show_edit_value         = true;
 static unsigned long edit_flash_toggle_at    = 0;
 static bool          show_date_until_timeout = false;
 static unsigned long show_date_until_ms      = 0;
-static bool          touch_prev              = false;
-static unsigned long touch_press_started_ms  = 0;
-static bool          reset_hint_shown        = false;
-static bool          reset_done              = false;
+
+struct ButtonState {
+    bool          raw_state = false;
+    bool          debounced_state = false;
+    unsigned long raw_changed_ms = 0;
+    unsigned long pressed_at_ms = 0;
+    bool          short_released = false;
+    bool          long_released = false;
+};
+
+static ButtonState setup_button;
+static ButtonState action_button;
 
 static int daysInMonth(int year, int month) {
     static const int month_days[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
@@ -112,24 +131,6 @@ static void setDefaultClockTime() {
 static void loadCurrentTime(tm &dst) {
     time_t now = time(nullptr);
     localtime_r(&now, &dst);
-}
-
-static bool isOnlineMode() {
-    return !setup_mode;
-}
-
-static void showResetHintFeedback() {
-    displayShowTime(88, 88, true, false);
-    delay(220);
-}
-
-static void showResetConfirmFeedback() {
-    for (uint8_t i = 0; i < 2; ++i) {
-        displayClear();
-        delay(140);
-        displayShowTime(0, 0, true, false);
-        delay(140);
-    }
 }
 
 static void startDateView() {
@@ -241,57 +242,61 @@ static void renderEditScreen() {
     }
 }
 
-static void handleTouchInput() {
-    bool pressed = (digitalRead(TOUCH_PIN) == TOUCH_ACTIVE_STATE);
+static void updateButton(ButtonState &button, uint8_t pin) {
+    bool pressed = (digitalRead(pin) == BUTTON_ACTIVE_STATE);
     unsigned long now = millis();
 
-    if (pressed && !touch_prev) {
-        touch_press_started_ms = now;
-        reset_hint_shown       = false;
-        reset_done             = false;
+    button.short_released = false;
+    button.long_released  = false;
+
+    if (pressed != button.raw_state) {
+        button.raw_state = pressed;
+        button.raw_changed_ms = now;
     }
 
-    if (pressed) {
-        unsigned long held = now - touch_press_started_ms;
-        if (!in_time_setup && isOnlineMode() && held >= TOUCH_RESET_HINT_MS && !reset_hint_shown) {
-            showResetHintFeedback();
-            reset_hint_shown = true;
-        }
-
-        if (!in_time_setup && isOnlineMode() && held >= TOUCH_RESET_HOLD_MS && !reset_done) {
-            switchToOfflineMode(true);
-            showResetConfirmFeedback();
-            reset_done = true;
-        }
+    if ((now - button.raw_changed_ms) < BUTTON_DEBOUNCE_MS) {
+        return;
     }
 
-    if (!pressed && touch_prev) {
-        unsigned long held = now - touch_press_started_ms;
-
-        if (reset_done) {
-            // Already handled while pressed.
-        } else if (held >= TOUCH_LONG_PRESS_MS) {
-            if (in_time_setup) {
-                advanceTimeSetupField();
-            } else {
-                startTimeSetup();
-            }
-        } else if (held >= TOUCH_SHORT_PRESS_MS) {
-            if (in_time_setup) {
-                cycleCurrentValue();
-            } else {
-                startDateView();
+    if (button.debounced_state != button.raw_state) {
+        button.debounced_state = button.raw_state;
+        if (button.debounced_state) {
+            button.pressed_at_ms = now;
+        } else {
+            unsigned long held = now - button.pressed_at_ms;
+            if (held >= BUTTON_LONG_PRESS_MS) {
+                button.long_released = true;
+            } else if (held >= BUTTON_SHORT_PRESS_MS) {
+                button.short_released = true;
             }
         }
     }
+}
 
-    touch_prev = pressed;
+static void handleButtonInput() {
+    updateButton(setup_button, SETUP_BUTTON_PIN);
+    updateButton(action_button, ACTION_BUTTON_PIN);
+
+    if (setup_button.long_released && !in_time_setup) {
+        startTimeSetup();
+    } else if (setup_button.short_released && in_time_setup) {
+        advanceTimeSetupField();
+    }
+
+    if (action_button.short_released) {
+        if (in_time_setup) {
+            cycleCurrentValue();
+        } else {
+            startDateView();
+        }
+    }
 }
 
 // ── setup() ───────────────────────────────────────────────────────────────
 void setup() {
     Serial.begin(115200);
-    pinMode(TOUCH_PIN, INPUT);
+    pinMode(SETUP_BUTTON_PIN, BUTTON_PIN_MODE);
+    pinMode(ACTION_BUTTON_PIN, BUTTON_PIN_MODE);
 
     displayInit();
     setDefaultClockTime();
@@ -354,7 +359,7 @@ void loop() {
         newScan = false;
     }
 
-    handleTouchInput();
+    handleButtonInput();
 
     // ── Clock display ──────────────────────────────────────────────────────
     loadCurrentTime(timeinfo);

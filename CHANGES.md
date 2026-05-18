@@ -16,6 +16,13 @@ The following changes have been made in this fork by
 - Reduced the default MAC-derived `DEVICE_ID` to the last 6 hexadecimal characters for shorter AP/mDNS names.
 - Kept `DEVICE_ID` build-flag override support for users who still want custom IDs.
 
+### Button input model (`src/espclock.cpp`, `platformio.ini`)
+- Replaced the single TTP223 touch control with two regular GPIO push buttons: one for entering/setup navigation and one for date display/value changes.
+- Added firmware-level button debouncing and split short/long press handling to improve reliability and usability.
+- Updated default build flags to expose separate setup/action button pins per board profile.
+
+
+
 ### Offline/online operation and touch control (`src/espclock.cpp`, `lib/espclock_common/src/wifi_manager.*`, `lib/espclock_common/src/web_server.cpp`, `platformio.ini`)
 - Repurposed setup/normal behavior into offline/online modes, with offline AP availability limited to a 15-minute boot window and default clock start at 00:00.
 - Added TTP223 touch interactions for date peek, local time/date setup (hours, minutes, 12/24h, year, day, month), and an online-mode long-hold reset back to offline mode.
