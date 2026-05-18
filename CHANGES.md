@@ -15,6 +15,11 @@ The following changes have been made in this fork by
 - Reduced the default MAC-derived `DEVICE_ID` to the last 6 hexadecimal characters for shorter AP/mDNS names.
 - Kept `DEVICE_ID` build-flag override support for users who still want custom IDs.
 
+### 3D model improvements
+- Removed touch sensor cutout for bold case
+- Created an extra latch in the bold case to keep the TM shield in place
+- Add 3MF with all the parts
+
 ---
 
 ## 2026-04-12
