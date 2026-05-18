@@ -25,8 +25,13 @@
 #include <LittleFS.h>
 
 // ── Device identity globals ────────────────────────────────────────────────
-const char *esp_ssid     = "ESPclock-" DEVICE_ID;
-const char *mdns_name    = "espclock-" DEVICE_ID;
+// Keep AP SSID within 32 chars: "ESPclock-" (9) + device_id (max 22) + NUL.
+static char device_id_buf[23]  = "";
+static char esp_ssid_buf[32]   = "";
+static char mdns_name_buf[32]  = "";
+const char *device_id          = device_id_buf;
+const char *esp_ssid           = esp_ssid_buf;
+const char *mdns_name          = mdns_name_buf;
 const char *esp_password = "waltwhite64";   // AP password (≥8 chars required)
 
 // ── WiFi credential globals ────────────────────────────────────────────────
@@ -43,6 +48,24 @@ unsigned long ap_shutdown_start   = 0;
 bool          ap_shutdown_pending = false;
 
 // ── Function implementations ───────────────────────────────────────────────
+
+void initDeviceIdentity() {
+#ifdef DEVICE_ID
+    snprintf(device_id_buf, sizeof(device_id_buf), "%s", DEVICE_ID);
+#else
+    uint8_t mac[6] = {0};
+    WiFi.macAddress(mac);
+    snprintf(
+        device_id_buf,
+        sizeof(device_id_buf),
+        "%02x%02x%02x%02x%02x%02x",
+        mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]
+    );
+#endif
+
+    snprintf(esp_ssid_buf, sizeof(esp_ssid_buf), "ESPclock-%s", device_id_buf);
+    snprintf(mdns_name_buf, sizeof(mdns_name_buf), "espclock-%s", device_id_buf);
+}
 
 void wifiScan() {
     WiFi.disconnect();

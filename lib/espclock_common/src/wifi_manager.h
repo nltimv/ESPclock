@@ -11,11 +11,9 @@
 #include <Arduino.h>
 
 // ── Device identity ────────────────────────────────────────────────────────
-// Override at build time with: build_flags = -D DEVICE_ID='"abcd"'
-#ifndef DEVICE_ID
-#define DEVICE_ID "0000"
-#endif
-
+// By default, a deterministic ID is generated from the device MAC address.
+// Optional override at build time: build_flags = -D DEVICE_ID='"abcd"'
+extern const char *device_id;     // Device ID (default: MAC-derived)
 extern const char *esp_ssid;      // AP SSID  ("ESPclock-<DEVICE_ID>")
 extern const char *mdns_name;     // mDNS name ("espclock-<DEVICE_ID>")
 extern const char *esp_password;  // AP password
@@ -41,6 +39,9 @@ void wifiScan();
 
 // (Re-)start the mDNS responder for mdns_name.local.
 void initMDNS();
+
+// Build deterministic identity strings from hardware MAC (or DEVICE_ID override).
+void initDeviceIdentity();
 
 // Load /config.json from LittleFS and attempt to restore the saved WiFi
 // connection and display/NTP settings.
