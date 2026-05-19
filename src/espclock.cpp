@@ -395,7 +395,11 @@ void loop() {
     loadCurrentTime(timeinfo);
 
     if (myTimer(1000)) {
-        state_dot_phase = !state_dot_phase;
+        if (setup_mode && ap_shutdown_pending) {
+            state_dot_phase = !state_dot_phase;
+        } else {
+            state_dot_phase = true;
+        }
 
         // Auto-brightness: adjust at transition hours
         if (br_auto) {
