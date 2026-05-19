@@ -65,6 +65,7 @@ static const unsigned long AP_OFFLINE_WINDOW_MS  = 15UL * 60UL * 1000UL;
 static const unsigned long BUTTON_DEBOUNCE_MS    = 35UL;
 static const unsigned long BUTTON_SHORT_PRESS_MS = 80UL;
 static const unsigned long BUTTON_LONG_PRESS_MS  = 1200UL;
+static const unsigned long BUTTON_REPEAT_MS      = 300UL;
 static const unsigned long EDIT_FLASH_MS         = 450UL;
 static const unsigned long RESET_HINT_MS         = 5000UL;
 static const unsigned long RESET_HOLD_MS         = 10000UL;
@@ -89,6 +90,9 @@ struct ButtonState {
     unsigned long pressed_at_ms = 0;
     bool          short_released = false;
     bool          long_released = false;
+    bool          long_pressed = false;
+    bool          long_press_fired = false;
+    unsigned long long_press_next_ms = 0;
 };
 
 static ButtonState   setup_button;
@@ -214,6 +218,7 @@ static void updateButton(ButtonState &button, uint8_t pin) {
 
     button.short_released = false;
     button.long_released  = false;
+    button.long_pressed   = false;
 
     if (pressed != button.raw_state) {
         button.raw_state = pressed;
@@ -227,13 +232,30 @@ static void updateButton(ButtonState &button, uint8_t pin) {
     if (button.debounced_state != button.raw_state) {
         button.debounced_state = button.raw_state;
         if (button.debounced_state) {
-            button.pressed_at_ms = now;
+            button.pressed_at_ms    = now;
+            button.long_press_fired = false;
         } else {
             unsigned long held = now - button.pressed_at_ms;
             if (held >= BUTTON_LONG_PRESS_MS) {
                 button.long_released = true;
             } else if (held >= BUTTON_SHORT_PRESS_MS) {
                 button.short_released = true;
+            }
+        }
+    }
+
+    // Fire long_pressed while the button is held past the long-press threshold,
+    // then auto-repeat every BUTTON_REPEAT_MS.
+    if (button.debounced_state) {
+        unsigned long held = now - button.pressed_at_ms;
+        if (held >= BUTTON_LONG_PRESS_MS) {
+            if (!button.long_press_fired) {
+                button.long_pressed          = true;
+                button.long_press_fired      = true;
+                button.long_press_next_ms    = now + BUTTON_REPEAT_MS;
+            } else if (now >= button.long_press_next_ms) {
+                button.long_pressed       = true;
+                button.long_press_next_ms = now + BUTTON_REPEAT_MS;
             }
         }
     }
@@ -281,7 +303,7 @@ static void handleButtonInput() {
             advanceTimeSetupField();
         }
 
-        if (action_button.short_released && in_time_setup) {
+        if (in_time_setup && (action_button.short_released || action_button.long_pressed)) {
             cycleCurrentValue();
         }
     }

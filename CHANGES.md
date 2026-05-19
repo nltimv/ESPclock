@@ -14,6 +14,7 @@ The following changes have been made in this fork by
 - Removed date-display and date-editing fields from the button interaction model to simplify the user experience.
 - Fixed time setup blinking so only the currently edited field (hour or minute) flashes rather than the entire display.
 - Added a dual-button hold gesture (both buttons held 5s for visual hint, 10s to reset to offline mode).
+- Action button now cycles the active time field immediately when held past the long-press threshold (1.2 s), then repeats every 300 ms, so the value updates without waiting for button release.
 
 ---
 
