@@ -23,8 +23,15 @@ uint8_t brightness = 7;
 
 // ── Non-blocking timer ─────────────────────────────────────────────────────
 static unsigned long g_timer_anchor_ms = 0;
+static bool          g_timer_anchor_initialized = false;
 
 unsigned long myTimer(unsigned long everywhen) {
+    if (!g_timer_anchor_initialized) {
+        g_timer_anchor_ms = millis();
+        g_timer_anchor_initialized = true;
+        return 0;
+    }
+
     unsigned long diff_time = millis() - g_timer_anchor_ms;
     int ret = 0;
     if (diff_time >= everywhen) {
@@ -36,6 +43,7 @@ unsigned long myTimer(unsigned long everywhen) {
 
 void myTimerReset() {
     g_timer_anchor_ms = millis();
+    g_timer_anchor_initialized = true;
 }
 
 // ══════════════════════════════════════════════════════════════════════════
