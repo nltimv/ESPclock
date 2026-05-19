@@ -87,38 +87,36 @@ void displaySetBrightness(uint8_t br) {
     mydisplay.setBrightness(br);
 }
 
-void displayShowTime(int hour, int minute, bool colonOn, bool twelveHr) {
+void displayShowTime(int hour, int minute, bool colonOn, bool twelveHr, bool stateDotOn) {
     // 12-hr conversion: 0→12, 1-12→1-12, 13-23→1-11
     int dispHour = twelveHr ? (hour % 12 == 0 ? 12 : hour % 12) : hour;
-    uint8_t colonMask = colonOn ? 0b01000000 : 0;
-    mydisplay.showNumberDecEx(dispHour, colonMask, false, 2, 0);
-    mydisplay.showNumberDecEx(minute,   colonMask, true,  2, 2);
+    uint8_t digits[4] = {
+        (uint8_t)(dispHour >= 10 ? mydisplay.encodeDigit(dispHour / 10) : 0x00),
+        (uint8_t)(mydisplay.encodeDigit(dispHour % 10) | (colonOn ? SEG_DP : 0x00)),
+        mydisplay.encodeDigit(minute / 10),
+        (uint8_t)(mydisplay.encodeDigit(minute % 10) | (stateDotOn ? SEG_DP : 0x00))
+    };
+    mydisplay.setSegments(digits, 4, 0);
 }
 
 void displayShowTimePartial(int hour, int minute, bool colonOn, bool twelveHr,
-                            bool showHour, bool showMinute) {
+                            bool showHour, bool showMinute, bool stateDotOn) {
     int dispHour = twelveHr ? (hour % 12 == 0 ? 12 : hour % 12) : hour;
-    uint8_t colonMask = colonOn ? 0b01000000 : 0;
-    if (showHour) {
-        mydisplay.showNumberDecEx(dispHour, colonMask, false, 2, 0);
-    } else {
-        uint8_t blank[2] = {0x00, (uint8_t)(colonOn ? SEG_DP : 0x00)};
-        mydisplay.setSegments(blank, 2, 0);
-    }
-    if (showMinute) {
-        mydisplay.showNumberDecEx(minute, colonMask, true, 2, 2);
-    } else {
-        static const uint8_t blank[2] = {0x00, 0x00};
-        mydisplay.setSegments(blank, 2, 2);
-    }
+    uint8_t digits[4] = {
+        (uint8_t)(showHour && dispHour >= 10 ? mydisplay.encodeDigit(dispHour / 10) : 0x00),
+        (uint8_t)((showHour ? mydisplay.encodeDigit(dispHour % 10) : 0x00) | (colonOn ? SEG_DP : 0x00)),
+        (uint8_t)(showMinute ? mydisplay.encodeDigit(minute / 10) : 0x00),
+        (uint8_t)((showMinute ? mydisplay.encodeDigit(minute % 10) : 0x00) | (stateDotOn ? SEG_DP : 0x00))
+    };
+    mydisplay.setSegments(digits, 4, 0);
 }
 
-void displayShowHourMode(bool twelveHr) {
+void displayShowHourMode(bool twelveHr, bool stateDotOn) {
     uint8_t digits[4] = {
         mydisplay.encodeDigit(twelveHr ? 1 : 2),
         mydisplay.encodeDigit(twelveHr ? 2 : 4),
         SEG_h,
-        0x00
+        (uint8_t)(stateDotOn ? SEG_DP : 0x00)
     };
     mydisplay.setSegments(digits, 4, 0);
 }
@@ -182,43 +180,47 @@ void displaySetBrightness(uint8_t br) {
     module.setupDisplay(true, br, 6);
 }
 
-void displayShowTime(int hour, int minute, bool colonOn, bool twelveHr) {
+void displayShowTime(int hour, int minute, bool colonOn, bool twelveHr, bool stateDotOn) {
     // 12-hr conversion: 0→12, 1-12→1-12, 13-23→1-11
     int dispHour = twelveHr ? (hour % 12 == 0 ? 12 : hour % 12) : hour;
     int timeVal  = dispHour * 100 + minute;
-    // TM16xx: bit 2 (0x04) of the dot-mask controls the colon
-    uint8_t dotMask = colonOn ? 0x04 : 0x00;
+    // TM16xx: bit 2 (0x04) controls the center colon, bit 0 (0x01) the last digit dot.
+    uint8_t dotMask = (colonOn ? 0x04 : 0x00) | (stateDotOn ? 0x01 : 0x00);
     display.setDisplayToDecNumber(timeVal, dotMask, true);
 }
 
 void displayShowTimePartial(int hour, int minute, bool colonOn, bool twelveHr,
-                            bool showHour, bool showMinute) {
+                            bool showHour, bool showMinute, bool stateDotOn) {
     if (showHour && showMinute) {
-        displayShowTime(hour, minute, colonOn, twelveHr);
+        displayShowTime(hour, minute, colonOn, twelveHr, stateDotOn);
         return;
     }
     int dispHour = twelveHr ? (hour % 12 == 0 ? 12 : hour % 12) : hour;
     if (showHour) {
-        module.setDisplayDigit(dispHour / 10, 0, true);
-        module.setDisplayDigit(dispHour % 10, 1, true);
+        if (dispHour >= 10) {
+            module.setDisplayDigit(dispHour / 10, 0, false);
+        } else {
+            module.setSegments(0x00, 0);
+        }
+        module.setDisplayDigit(dispHour % 10, 1, colonOn);
     } else {
         module.setSegments(0x00, 0);
-        module.setSegments(0x00, 1);
+        module.setSegments(colonOn ? 0x80 : 0x00, 1);
     }
     if (showMinute) {
-        module.setDisplayDigit(minute / 10, 2, true);
-        module.setDisplayDigit(minute % 10, 3, true);
+        module.setDisplayDigit(minute / 10, 2, false);
+        module.setDisplayDigit(minute % 10, 3, stateDotOn);
     } else {
         module.setSegments(0x00, 2);
-        module.setSegments(0x00, 3);
+        module.setSegments(stateDotOn ? 0x80 : 0x00, 3);
     }
 }
 
-void displayShowHourMode(bool twelveHr) {
+void displayShowHourMode(bool twelveHr, bool stateDotOn) {
     module.setDisplayDigit(twelveHr ? 1 : 2, 0, false);
     module.setDisplayDigit(twelveHr ? 2 : 4, 1, false);
     module.setSegments(0x74, 2); // lowercase "h"
-    module.setSegments(0x00, 3);
+    module.setSegments(stateDotOn ? 0x80 : 0x00, 3);
 }
 
 void displayAnim() {

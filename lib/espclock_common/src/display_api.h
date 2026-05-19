@@ -34,10 +34,10 @@ void displayShowError(uint8_t code);   // show "Err <code>" on the display
 void displayShowTrying();              // show "trY" while connecting to WiFi
 void displayShowAttempt(uint8_t n);    // show attempt-counter digit n
 void displaySetBrightness(uint8_t br); // apply a new brightness level
-void displayShowTime(int hour, int minute, bool colonOn, bool twelveHr); // render clock face
+void displayShowTime(int hour, int minute, bool colonOn, bool twelveHr, bool stateDotOn); // render clock face
 // Like displayShowTime, but showHour/showMinute control which field is visible.
 // Pass showHour=false to blank the hour digits, showMinute=false to blank minute digits.
 void displayShowTimePartial(int hour, int minute, bool colonOn, bool twelveHr,
-                            bool showHour, bool showMinute);
-void displayShowHourMode(bool twelveHr); // render "12h" or "24h" for mode selection
+                            bool showHour, bool showMinute, bool stateDotOn);
+void displayShowHourMode(bool twelveHr, bool stateDotOn); // render "12h" or "24h" for mode selection
 void displayAnim();                    // bouncing-dot waiting animation

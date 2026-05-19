@@ -73,9 +73,9 @@ static const unsigned long RESET_HOLD_MS         = 10000UL;
 
 enum class EditField : uint8_t {
     NONE = 0,
+    TWELVE_24,
     HOUR,
-    MINUTE,
-    TWELVE_24
+    MINUTE
 };
 
 static bool          in_time_setup           = false;
@@ -83,6 +83,7 @@ static EditField     edit_field              = EditField::NONE;
 static tm            edit_time               = {};
 static bool          show_edit_value         = true;
 static unsigned long edit_flash_toggle_at    = 0;
+static bool          state_dot_phase         = true;
 
 struct ButtonState {
     bool          raw_state = false;
@@ -133,24 +134,34 @@ static void showResetConfirmFeedback() {
     for (uint8_t i = 0; i < 2; ++i) {
         displayClear();
         delay(140);
-        displayShowTime(0, 0, true, false);
+        displayShowTime(0, 0, true, false, false);
         delay(140);
     }
+}
+
+static bool isStateDotOn() {
+    if (!setup_mode) {
+        return true;
+    }
+    if (ap_shutdown_pending) {
+        return state_dot_phase;
+    }
+    return false;
 }
 
 static void startTimeSetup() {
     loadCurrentTime(edit_time);
     in_time_setup        = true;
-    edit_field           = EditField::HOUR;
+    edit_field           = EditField::TWELVE_24;
     show_edit_value      = true;
     edit_flash_toggle_at = millis();
 }
 
 static void advanceTimeSetupField() {
     switch (edit_field) {
+        case EditField::TWELVE_24: edit_field = EditField::HOUR;      break;
         case EditField::HOUR:      edit_field = EditField::MINUTE;    break;
-        case EditField::MINUTE:    edit_field = EditField::TWELVE_24; break;
-        case EditField::TWELVE_24:
+        case EditField::MINUTE:
             setClockFromTm(edit_time);
             in_time_setup = false;
             edit_field    = EditField::NONE;
@@ -181,29 +192,30 @@ static void cycleCurrentValue() {
 }
 
 static void renderEditScreen() {
+    bool stateDotOn = isStateDotOn();
     if ((millis() - edit_flash_toggle_at) >= EDIT_FLASH_MS) {
         show_edit_value      = !show_edit_value;
         edit_flash_toggle_at = millis();
     }
 
     switch (edit_field) {
-        case EditField::HOUR:
-            displayShowTimePartial(edit_time.tm_hour, edit_time.tm_min, true, twelve,
-                                   show_edit_value, true);
-            break;
-        case EditField::MINUTE:
-            displayShowTimePartial(edit_time.tm_hour, edit_time.tm_min, true, twelve,
-                                   true, show_edit_value);
-            break;
         case EditField::TWELVE_24:
             if (show_edit_value) {
-                displayShowHourMode(twelve);
+                displayShowHourMode(twelve, stateDotOn);
             } else {
                 displayClear();
             }
             break;
+        case EditField::HOUR:
+            displayShowTimePartial(edit_time.tm_hour, edit_time.tm_min, true, twelve,
+                                   show_edit_value, true, stateDotOn);
+            break;
+        case EditField::MINUTE:
+            displayShowTimePartial(edit_time.tm_hour, edit_time.tm_min, true, twelve,
+                                   true, show_edit_value, stateDotOn);
+            break;
         default:
-            displayShowTime(timeinfo.tm_hour, timeinfo.tm_min, true, twelve);
+            displayShowTime(timeinfo.tm_hour, timeinfo.tm_min, true, twelve, stateDotOn);
             break;
     }
 }
@@ -293,7 +305,7 @@ static void handleButtonInput() {
     }
 
     if (!combo_in_progress) {
-        if (setup_button.long_pressed && !in_time_setup) {
+        if (setup_mode && setup_button.long_pressed && !in_time_setup) {
             startTimeSetup();
         } else if (setup_button.short_released && in_time_setup) {
             advanceTimeSetupField();
@@ -383,6 +395,8 @@ void loop() {
     loadCurrentTime(timeinfo);
 
     if (myTimer(1000)) {
+        state_dot_phase = !state_dot_phase;
+
         // Auto-brightness: adjust at transition hours
         if (br_auto) {
             switch (timeinfo.tm_hour) {
@@ -399,13 +413,13 @@ void loop() {
     }
 
     if (reset_hint_active) {
-        displayShowTime(88, 88, true, false);
+        displayShowTime(88, 88, true, false, false);
     } else if (in_time_setup) {
         renderEditScreen();
     } else if (blink) {
-        displayShowTime(timeinfo.tm_hour, timeinfo.tm_min, colon, twelve);
+        displayShowTime(timeinfo.tm_hour, timeinfo.tm_min, colon, twelve, isStateDotOn());
     } else {
-        displayShowTime(timeinfo.tm_hour, timeinfo.tm_min, true, twelve);
+        displayShowTime(timeinfo.tm_hour, timeinfo.tm_min, true, twelve, isStateDotOn());
     }
 
     // ── WiFi connection ────────────────────────────────────────────────────

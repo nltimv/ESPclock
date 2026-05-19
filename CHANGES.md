@@ -20,6 +20,7 @@ The following changes have been made in this fork by
 - Offline reset now also resets the clock time back to `00:00` when triggered.
 - Fixed first-time online setup flow so the AP stays available after Wi-Fi connection until timezone is submitted, then transitions to STA-only mode.
 - Restored the post-timezone setup confirmation by delaying the final AP shutdown briefly so the browser can show the completion message before switching to STA-only mode.
+- Added a last-digit dot state indicator for offline/AP-online status, moved the local `12h`/`24h` choice ahead of hour/minute editing, and blocked manual time setup while the clock is in online mode.
 
 ---
 
