@@ -33,6 +33,11 @@ The following changes have been made in this fork by
 ### Web UI wording (`data/index.html`)
 - Updated setup-related labels/messages to use clearer offline/online language for non-technical users.
 
+### 3D model improvements
+- Removed touch sensor cutout for bold case
+- Created an extra latch in the bold case to keep the TM shield in place
+- Add 3MF with all the parts
+
 ---
 
 ## 2026-04-12
