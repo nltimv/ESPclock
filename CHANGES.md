@@ -18,6 +18,7 @@ The following changes have been made in this fork by
 - Time-setup mode now starts as soon as setup-button long-press threshold is reached, keeps the colon steady while hour digits blink, and shows 12h/24h selection as `12h`/`24h`.
 - Dual-button reset now keeps `88:88` visible continuously from the 5-second hint point until reset at 10 seconds (or button release).
 - Offline reset now also resets the clock time back to `00:00` when triggered.
+- Fixed first-time online setup flow so the AP stays available after Wi-Fi connection until timezone is submitted, then transitions to STA-only mode.
 
 ---
 

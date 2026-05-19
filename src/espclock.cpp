@@ -432,9 +432,6 @@ void loop() {
                     File fc = LittleFS.open("/config.json", "w+");
                     serializeJsonPretty(config, fc);
                     fc.close();
-                    setup_mode = false;
-                    ap_shutdown_pending = false;
-                    WiFi.mode(WIFI_STA);
                 }
                 break;
             } else if (attempts == 4) {

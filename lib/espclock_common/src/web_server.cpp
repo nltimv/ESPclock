@@ -198,6 +198,7 @@ void setupRoutes() {
             start_NtpClient = true;
 
             // Once timezone is set, we are now in online mode.
+            setup_mode = false;
             ap_shutdown_pending = false;
             WiFi.mode(WIFI_STA);
 
