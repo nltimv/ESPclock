@@ -52,6 +52,7 @@ static const uint8_t SEG_Err[] = {
     SEG_E | SEG_G,                                // r
     SEG_E | SEG_G                                 // r
 };
+static const uint8_t SEG_h = SEG_C | SEG_E | SEG_F | SEG_G;
 
 // ── Animation state ────────────────────────────────────────────────────────
 static uint8_t       px         = 4;
@@ -101,7 +102,7 @@ void displayShowTimePartial(int hour, int minute, bool colonOn, bool twelveHr,
     if (showHour) {
         mydisplay.showNumberDecEx(dispHour, colonMask, false, 2, 0);
     } else {
-        uint8_t blank[2] = {0x00, colonMask};
+        uint8_t blank[2] = {0x00, (uint8_t)(colonOn ? SEG_DP : 0x00)};
         mydisplay.setSegments(blank, 2, 0);
     }
     if (showMinute) {
@@ -110,6 +111,16 @@ void displayShowTimePartial(int hour, int minute, bool colonOn, bool twelveHr,
         static const uint8_t blank[2] = {0x00, 0x00};
         mydisplay.setSegments(blank, 2, 2);
     }
+}
+
+void displayShowHourMode(bool twelveHr) {
+    uint8_t digits[4] = {
+        mydisplay.encodeDigit(twelveHr ? 1 : 2),
+        mydisplay.encodeDigit(twelveHr ? 2 : 4),
+        SEG_h,
+        0x00
+    };
+    mydisplay.setSegments(digits, 4, 0);
 }
 
 void displayAnim() {
@@ -201,6 +212,13 @@ void displayShowTimePartial(int hour, int minute, bool colonOn, bool twelveHr,
         module.setSegments(0x00, 2);
         module.setSegments(0x00, 3);
     }
+}
+
+void displayShowHourMode(bool twelveHr) {
+    module.setDisplayDigit(twelveHr ? 1 : 2, 0, false);
+    module.setDisplayDigit(twelveHr ? 2 : 4, 1, false);
+    module.setSegments(0x74, 2); // lowercase "h"
+    module.setSegments(0x00, 3);
 }
 
 void displayAnim() {

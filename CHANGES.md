@@ -15,6 +15,7 @@ The following changes have been made in this fork by
 - Fixed time setup blinking so only the currently edited field (hour or minute) flashes rather than the entire display.
 - Added a dual-button hold gesture (both buttons held 5s for visual hint, 10s to reset to offline mode).
 - Action button now cycles the active time field immediately when held past the long-press threshold (1.2 s), then repeats every 300 ms, so the value updates without waiting for button release.
+- Time-setup mode now starts as soon as setup-button long-press threshold is reached, keeps the colon steady while hour digits blink, and shows 12h/24h selection as `12h`/`24h`.
 
 ---
 

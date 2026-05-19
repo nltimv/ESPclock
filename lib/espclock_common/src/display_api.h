@@ -39,4 +39,5 @@ void displayShowTime(int hour, int minute, bool colonOn, bool twelveHr); // rend
 // Pass showHour=false to blank the hour digits, showMinute=false to blank minute digits.
 void displayShowTimePartial(int hour, int minute, bool colonOn, bool twelveHr,
                             bool showHour, bool showMinute);
+void displayShowHourMode(bool twelveHr); // render "12h" or "24h" for mode selection
 void displayAnim();                    // bouncing-dot waiting animation

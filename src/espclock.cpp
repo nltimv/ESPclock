@@ -201,7 +201,7 @@ static void renderEditScreen() {
             break;
         case EditField::TWELVE_24:
             if (show_edit_value) {
-                displayShowTime(twelve ? 12 : 24, 0, false, false);
+                displayShowHourMode(twelve);
             } else {
                 displayClear();
             }
@@ -297,7 +297,7 @@ static void handleButtonInput() {
     }
 
     if (!combo_in_progress) {
-        if (setup_button.long_released && !in_time_setup) {
+        if (setup_button.long_pressed && !in_time_setup) {
             startTimeSetup();
         } else if (setup_button.short_released && in_time_setup) {
             advanceTimeSetupField();
