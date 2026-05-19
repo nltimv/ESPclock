@@ -90,9 +90,14 @@ void displaySetBrightness(uint8_t br) {
 void displayShowTime(int hour, int minute, bool colonOn, bool twelveHr, bool stateDotOn) {
     // 12-hr conversion: 0→12, 1-12→1-12, 13-23→1-11
     int dispHour = twelveHr ? (hour % 12 == 0 ? 12 : hour % 12) : hour;
+#if defined(DISPLAY_STATE_INDICATOR_ON_COLON)
+    bool colonSegmentOn = stateDotOn;
+#else
+    bool colonSegmentOn = colonOn;
+#endif
     uint8_t digits[4] = {
         (uint8_t)(dispHour >= 10 ? mydisplay.encodeDigit(dispHour / 10) : 0x00),
-        (uint8_t)(mydisplay.encodeDigit(dispHour % 10) | (colonOn ? SEG_DP : 0x00)),
+        (uint8_t)(mydisplay.encodeDigit(dispHour % 10) | (colonSegmentOn ? SEG_DP : 0x00)),
         mydisplay.encodeDigit(minute / 10),
         (uint8_t)(mydisplay.encodeDigit(minute % 10) | (stateDotOn ? SEG_DP : 0x00))
     };
@@ -102,9 +107,14 @@ void displayShowTime(int hour, int minute, bool colonOn, bool twelveHr, bool sta
 void displayShowTimePartial(int hour, int minute, bool colonOn, bool twelveHr,
                             bool showHour, bool showMinute, bool stateDotOn) {
     int dispHour = twelveHr ? (hour % 12 == 0 ? 12 : hour % 12) : hour;
+#if defined(DISPLAY_STATE_INDICATOR_ON_COLON)
+    bool colonSegmentOn = stateDotOn;
+#else
+    bool colonSegmentOn = colonOn;
+#endif
     uint8_t digits[4] = {
         (uint8_t)(showHour && dispHour >= 10 ? mydisplay.encodeDigit(dispHour / 10) : 0x00),
-        (uint8_t)((showHour ? mydisplay.encodeDigit(dispHour % 10) : 0x00) | (colonOn ? SEG_DP : 0x00)),
+        (uint8_t)((showHour ? mydisplay.encodeDigit(dispHour % 10) : 0x00) | (colonSegmentOn ? SEG_DP : 0x00)),
         (uint8_t)(showMinute ? mydisplay.encodeDigit(minute / 10) : 0x00),
         (uint8_t)((showMinute ? mydisplay.encodeDigit(minute % 10) : 0x00) | (stateDotOn ? SEG_DP : 0x00))
     };
@@ -114,7 +124,11 @@ void displayShowTimePartial(int hour, int minute, bool colonOn, bool twelveHr,
 void displayShowHourMode(bool twelveHr, bool stateDotOn) {
     uint8_t digits[4] = {
         mydisplay.encodeDigit(twelveHr ? 1 : 2),
-        mydisplay.encodeDigit(twelveHr ? 2 : 4),
+        (uint8_t)(mydisplay.encodeDigit(twelveHr ? 2 : 4)
+#if defined(DISPLAY_STATE_INDICATOR_ON_COLON)
+                  | (stateDotOn ? SEG_DP : 0x00)
+#endif
+        ),
         SEG_h,
         (uint8_t)(stateDotOn ? SEG_DP : 0x00)
     };

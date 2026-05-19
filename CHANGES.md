@@ -21,6 +21,7 @@ The following changes have been made in this fork by
 - Fixed first-time online setup flow so the AP stays available after Wi-Fi connection until timezone is submitted, then transitions to STA-only mode.
 - Restored the post-timezone setup confirmation by delaying the final AP shutdown briefly so the browser can show the completion message before switching to STA-only mode.
 - Added a last-digit dot state indicator for offline/AP-online status, moved the local `12h`/`24h` choice ahead of hour/minute editing, and blocked manual time setup while the clock is in online mode.
+- For TM1637 builds, added a fallback that mirrors the state indicator onto the center colon so the status remains visible on modules where the last-digit dot is not wired.
 
 ---
 
