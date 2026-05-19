@@ -10,28 +10,15 @@ The following changes have been made in this fork by
 
 ## 2026-05-19
 
-### Time display indicator behavior (`src/espclock.cpp`, `lib/espclock_common/src/display.cpp`, `platformio.ini`)
-- Removed online/offline state-indicator rendering from the clock face across display drivers.
-- Restored the classic time behavior where the center colon blinks every second while time is shown.
+### Display and time setup behavior (`src/espclock.cpp`, `lib/espclock_common/src/display_api.h`, `lib/espclock_common/src/display.cpp`)
+- Removed online/offline state-indicator rendering from the clock face; time display now consistently uses the classic blinking center colon behavior.
+- Simplified display and edit-mode rendering by removing date-editing screens and making only the active time field blink during manual setup.
+- Updated button-driven setup UX: long-press setup enters time editing immediately, action-button hold cycles values continuously, and 12h/24h selection is shown as `12h`/`24h`.
+- Added clearer dual-button reset flow with continuous `88:88` hold feedback, offline-mode reset, and clock reset to `00:00`.
 
-### Display API cleanup (`lib/espclock_common/src/display_api.h`, `lib/espclock_common/src/display.cpp`, `src/espclock.cpp`)
-- Removed obsolete `stateDotOn` parameters and no-op handling from display API declarations, implementations, and call sites.
-- Kept the simplified display behavior focused on time rendering with second-by-second colon blinking.
-
-### TM1637 display updates (`lib/espclock_common/src/display.cpp`, `platformio.ini`)
-- Kept TM1637 center-separator behavior aligned with classic time colon blinking.
-- Removed now-unused TM1637 status-indicator build-flag wiring.
-
-### Button input and time setup improvements (`src/espclock.cpp`, `lib/espclock_common/src/display_api.h`, `lib/espclock_common/src/display.cpp`)
-- Removed date-display and date-editing fields from the button interaction model to simplify the user experience.
-- Fixed time setup blinking so only the currently edited field (hour or minute) flashes rather than the entire display.
-- Added a dual-button hold gesture (both buttons held 5s for visual hint, 10s to reset to offline mode).
-- Action button now cycles the active time field immediately when held past the long-press threshold (1.2 s), then repeats every 300 ms, so the value updates without waiting for button release.
-- Time-setup mode now starts as soon as setup-button long-press threshold is reached, keeps the colon steady while hour digits blink, and shows 12h/24h selection as `12h`/`24h`.
-- Dual-button reset now keeps `88:88` visible continuously from the 5-second hint point until reset at 10 seconds (or button release).
-- Offline reset now also resets the clock time back to `00:00` when triggered.
-- Fixed first-time online setup flow so the AP stays available after Wi-Fi connection until timezone is submitted, then transitions to STA-only mode.
-- Restored the post-timezone setup confirmation by delaying the final AP shutdown briefly so the browser can show the completion message before switching to STA-only mode.
+### First-time setup flow reliability (`src/espclock.cpp`, `lib/espclock_common/src/web_server.cpp`)
+- Kept AP setup available through Wi-Fi connection until timezone submission, then switched to STA-only mode.
+- Preserved setup-complete feedback by delaying final AP shutdown briefly so completion pages can render reliably.
 
 ---
 
