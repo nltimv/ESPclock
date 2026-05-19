@@ -59,7 +59,7 @@ static uint8_t       px         = 4;
 static const uint8_t SEG_WAIT[] = { SEG_G };
 static bool          forw       = true;   // true = sweeping right→left
 
-static inline bool colonSegmentOn(bool colonOn, bool stateDotOn) {
+static inline bool resolveColonSegmentState(bool colonOn, bool stateDotOn) {
 #if defined(DISPLAY_STATE_INDICATOR_ON_COLON)
     (void)colonOn;
     return stateDotOn;
@@ -100,7 +100,7 @@ void displaySetBrightness(uint8_t br) {
 void displayShowTime(int hour, int minute, bool colonOn, bool twelveHr, bool stateDotOn) {
     // 12-hr conversion: 0→12, 1-12→1-12, 13-23→1-11
     int dispHour = twelveHr ? (hour % 12 == 0 ? 12 : hour % 12) : hour;
-    bool colonOnSegment = colonSegmentOn(colonOn, stateDotOn);
+    bool colonOnSegment = resolveColonSegmentState(colonOn, stateDotOn);
     uint8_t digits[4] = {
         (uint8_t)(dispHour >= 10 ? mydisplay.encodeDigit(dispHour / 10) : 0x00),
         (uint8_t)(mydisplay.encodeDigit(dispHour % 10) | (colonOnSegment ? SEG_DP : 0x00)),
@@ -117,7 +117,7 @@ void displayShowTime(int hour, int minute, bool colonOn, bool twelveHr, bool sta
 void displayShowTimePartial(int hour, int minute, bool colonOn, bool twelveHr,
                             bool showHour, bool showMinute, bool stateDotOn) {
     int dispHour = twelveHr ? (hour % 12 == 0 ? 12 : hour % 12) : hour;
-    bool colonOnSegment = colonSegmentOn(colonOn, stateDotOn);
+    bool colonOnSegment = resolveColonSegmentState(colonOn, stateDotOn);
     uint8_t digits[4] = {
         (uint8_t)(showHour && dispHour >= 10 ? mydisplay.encodeDigit(dispHour / 10) : 0x00),
         (uint8_t)((showHour ? mydisplay.encodeDigit(dispHour % 10) : 0x00) | (colonOnSegment ? SEG_DP : 0x00)),
@@ -140,7 +140,11 @@ void displayShowHourMode(bool twelveHr, bool stateDotOn) {
 #endif
         ),
         SEG_h,
+#if defined(DISPLAY_STATE_INDICATOR_ON_COLON)
         0x00
+#else
+        (uint8_t)(stateDotOn ? SEG_DP : 0x00)
+#endif
     };
     mydisplay.setSegments(digits, 4, 0);
 }
