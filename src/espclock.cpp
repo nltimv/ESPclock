@@ -133,7 +133,7 @@ static void showResetConfirmFeedback() {
     for (uint8_t i = 0; i < 2; ++i) {
         displayClear();
         delay(140);
-        displayShowTime(0, 0, true, false, false);
+        displayShowTime(0, 0, true, false);
         delay(140);
     }
 }
@@ -189,21 +189,21 @@ static void renderEditScreen() {
     switch (edit_field) {
         case EditField::TWELVE_24:
             if (show_edit_value) {
-                displayShowHourMode(twelve, false);
+                displayShowHourMode(twelve);
             } else {
                 displayClear();
             }
             break;
         case EditField::HOUR:
             displayShowTimePartial(edit_time.tm_hour, edit_time.tm_min, true, twelve,
-                                   show_edit_value, true, false);
+                                   show_edit_value, true);
             break;
         case EditField::MINUTE:
             displayShowTimePartial(edit_time.tm_hour, edit_time.tm_min, true, twelve,
-                                   true, show_edit_value, false);
+                                   true, show_edit_value);
             break;
         default:
-            displayShowTime(timeinfo.tm_hour, timeinfo.tm_min, true, twelve, false);
+            displayShowTime(timeinfo.tm_hour, timeinfo.tm_min, true, twelve);
             break;
     }
 }
@@ -401,11 +401,11 @@ void loop() {
     }
 
     if (reset_hint_active) {
-        displayShowTime(88, 88, true, false, false);
+        displayShowTime(88, 88, true, false);
     } else if (in_time_setup) {
         renderEditScreen();
     } else {
-        displayShowTime(timeinfo.tm_hour, timeinfo.tm_min, colon, twelve, false);
+        displayShowTime(timeinfo.tm_hour, timeinfo.tm_min, colon, twelve);
     }
 
     // ── WiFi connection ────────────────────────────────────────────────────

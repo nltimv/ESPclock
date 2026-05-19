@@ -14,6 +14,10 @@ The following changes have been made in this fork by
 - Removed online/offline state-indicator rendering from the clock face across display drivers.
 - Restored the classic time behavior where the center colon blinks every second while time is shown.
 
+### Display API cleanup (`lib/espclock_common/src/display_api.h`, `lib/espclock_common/src/display.cpp`, `src/espclock.cpp`)
+- Removed obsolete `stateDotOn` parameters and no-op handling from display API declarations, implementations, and call sites.
+- Kept the simplified display behavior focused on time rendering with second-by-second colon blinking.
+
 ### TM1637 display updates (`lib/espclock_common/src/display.cpp`, `platformio.ini`)
 - Kept TM1637 center-separator behavior aligned with classic time colon blinking.
 - Removed now-unused TM1637 status-indicator build-flag wiring.

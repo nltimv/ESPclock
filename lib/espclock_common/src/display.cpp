@@ -60,9 +60,8 @@ static const uint8_t SEG_WAIT[] = { SEG_G };
 static bool          forw       = true;   // true = sweeping right→left
 
 // Returns whether SEG_DP should be lit on TM1637 digit #2 (center separator).
-// The center separator always follows colonOn so the time colon blinks.
-static inline bool shouldShowDotSegment(bool colonOn, bool stateDotOn) {
-    (void)stateDotOn;
+// The center separator follows colonOn so the time colon blinks.
+static inline bool shouldShowDotSegment(bool colonOn) {
     return colonOn;
 }
 
@@ -94,11 +93,10 @@ void displaySetBrightness(uint8_t br) {
     mydisplay.setBrightness(br);
 }
 
-void displayShowTime(int hour, int minute, bool colonOn, bool twelveHr, bool stateDotOn) {
+void displayShowTime(int hour, int minute, bool colonOn, bool twelveHr) {
     // 12-hr conversion: 0→12, 1-12→1-12, 13-23→1-11
     int dispHour = twelveHr ? (hour % 12 == 0 ? 12 : hour % 12) : hour;
-    bool dotSegmentOn = shouldShowDotSegment(colonOn, stateDotOn);
-    (void)stateDotOn;
+    bool dotSegmentOn = shouldShowDotSegment(colonOn);
     uint8_t digits[4] = {
         (uint8_t)(dispHour >= 10 ? mydisplay.encodeDigit(dispHour / 10) : 0x00),
         (uint8_t)(mydisplay.encodeDigit(dispHour % 10) | (dotSegmentOn ? SEG_DP : 0x00)),
@@ -109,10 +107,9 @@ void displayShowTime(int hour, int minute, bool colonOn, bool twelveHr, bool sta
 }
 
 void displayShowTimePartial(int hour, int minute, bool colonOn, bool twelveHr,
-                            bool showHour, bool showMinute, bool stateDotOn) {
+                            bool showHour, bool showMinute) {
     int dispHour = twelveHr ? (hour % 12 == 0 ? 12 : hour % 12) : hour;
-    bool dotSegmentOn = shouldShowDotSegment(colonOn, stateDotOn);
-    (void)stateDotOn;
+    bool dotSegmentOn = shouldShowDotSegment(colonOn);
     uint8_t hourUnits = showHour ? mydisplay.encodeDigit(dispHour % 10) : 0x00;
     uint8_t digits[4] = {
         (uint8_t)(showHour && dispHour >= 10 ? mydisplay.encodeDigit(dispHour / 10) : 0x00),
@@ -123,9 +120,8 @@ void displayShowTimePartial(int hour, int minute, bool colonOn, bool twelveHr,
     mydisplay.setSegments(digits, 4, 0);
 }
 
-void displayShowHourMode(bool twelveHr, bool stateDotOn) {
+void displayShowHourMode(bool twelveHr) {
     uint8_t secondDigit = mydisplay.encodeDigit(twelveHr ? 2 : 4);
-    (void)stateDotOn;
     uint8_t digits[4] = {
         mydisplay.encodeDigit(twelveHr ? 1 : 2),
         secondDigit,
@@ -194,20 +190,19 @@ void displaySetBrightness(uint8_t br) {
     module.setupDisplay(true, br, 6);
 }
 
-void displayShowTime(int hour, int minute, bool colonOn, bool twelveHr, bool stateDotOn) {
+void displayShowTime(int hour, int minute, bool colonOn, bool twelveHr) {
     // 12-hr conversion: 0→12, 1-12→1-12, 13-23→1-11
     int dispHour = twelveHr ? (hour % 12 == 0 ? 12 : hour % 12) : hour;
     int timeVal  = dispHour * 100 + minute;
     // TM16xx: bit 2 (0x04) controls the center colon.
-    (void)stateDotOn;
     uint8_t dotMask = (colonOn ? 0x04 : 0x00);
     display.setDisplayToDecNumber(timeVal, dotMask, true);
 }
 
 void displayShowTimePartial(int hour, int minute, bool colonOn, bool twelveHr,
-                            bool showHour, bool showMinute, bool stateDotOn) {
+                            bool showHour, bool showMinute) {
     if (showHour && showMinute) {
-        displayShowTime(hour, minute, colonOn, twelveHr, stateDotOn);
+        displayShowTime(hour, minute, colonOn, twelveHr);
         return;
     }
     int dispHour = twelveHr ? (hour % 12 == 0 ? 12 : hour % 12) : hour;
@@ -231,7 +226,7 @@ void displayShowTimePartial(int hour, int minute, bool colonOn, bool twelveHr,
     }
 }
 
-void displayShowHourMode(bool twelveHr, bool stateDotOn) {
+void displayShowHourMode(bool twelveHr) {
     module.setDisplayDigit(twelveHr ? 1 : 2, 0, false);
     module.setDisplayDigit(twelveHr ? 2 : 4, 1, false);
     module.setSegments(0x74, 2); // lowercase "h"
