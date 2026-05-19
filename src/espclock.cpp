@@ -305,6 +305,8 @@ static void handleButtonInput() {
     }
 
     if (!combo_in_progress) {
+        // setup_mode=true means offline/local-setup mode; block manual time edits
+        // once the device is in online mode and syncing time from the network.
         if (setup_mode && setup_button.long_pressed && !in_time_setup) {
             startTimeSetup();
         } else if (setup_button.short_released && in_time_setup) {
