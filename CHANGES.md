@@ -16,7 +16,8 @@ The following changes have been made in this fork by
 - Added a dual-button hold gesture (both buttons held 5s for visual hint, 10s to reset to offline mode).
 - Action button now cycles the active time field immediately when held past the long-press threshold (1.2 s), then repeats every 300 ms, so the value updates without waiting for button release.
 - Time-setup mode now starts as soon as setup-button long-press threshold is reached, keeps the colon steady while hour digits blink, and shows 12h/24h selection as `12h`/`24h`.
-- Dual-button reset now keeps `88:88` visible continuously from the 5-second hint point until reset at 10 seconds (or button release), and resets clock time back to `00:00` when reset is triggered.
+- Dual-button reset now keeps `88:88` visible continuously from the 5-second hint point until reset at 10 seconds (or button release).
+- Offline reset now also resets the clock time back to `00:00` when triggered.
 
 ---
 
