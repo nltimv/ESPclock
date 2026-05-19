@@ -99,7 +99,7 @@ static ButtonState   setup_button;
 static ButtonState   action_button;
 static bool          both_held_active    = false;
 static unsigned long both_held_since_ms  = 0;
-static bool          reset_hint_shown    = false;
+static bool          reset_hint_active   = false;
 static bool          reset_done          = false;
 static bool          combo_in_progress   = false;
 
@@ -126,11 +126,6 @@ static void setDefaultClockTime() {
 static void loadCurrentTime(tm &dst) {
     time_t now = time(nullptr);
     localtime_r(&now, &dst);
-}
-
-static void showResetHintFeedback() {
-    displayShowTime(88, 88, true, false);
-    delay(220);
 }
 
 static void showResetConfirmFeedback() {
@@ -271,13 +266,14 @@ static void handleButtonInput() {
     if (both_held && !both_held_active) {
         both_held_active   = true;
         both_held_since_ms = now;
-        reset_hint_shown   = false;
+        reset_hint_active  = false;
         reset_done         = false;
         combo_in_progress  = true;
     }
 
     if (!both_held) {
         both_held_active = false;
+        reset_hint_active = false;
         if (!setup_button.debounced_state && !action_button.debounced_state) {
             combo_in_progress = false;
         }
@@ -285,14 +281,13 @@ static void handleButtonInput() {
 
     if (both_held_active) {
         unsigned long held = now - both_held_since_ms;
-        if (held >= RESET_HINT_MS && !reset_hint_shown) {
-            showResetHintFeedback();
-            reset_hint_shown = true;
-        }
+        reset_hint_active = (held >= RESET_HINT_MS && held < RESET_HOLD_MS && !reset_done);
         if (held >= RESET_HOLD_MS && !reset_done) {
             switchToOfflineMode(true);
+            setDefaultClockTime();
             showResetConfirmFeedback();
             reset_done = true;
+            reset_hint_active = false;
         }
     }
 
@@ -397,7 +392,9 @@ void loop() {
         }
     }
 
-    if (in_time_setup) {
+    if (reset_hint_active) {
+        displayShowTime(88, 88, true, false);
+    } else if (in_time_setup) {
         renderEditScreen();
     } else if (blink) {
         displayShowTime(timeinfo.tm_hour, timeinfo.tm_min, colon, twelve);
