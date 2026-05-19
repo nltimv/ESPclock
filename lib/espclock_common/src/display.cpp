@@ -59,7 +59,10 @@ static uint8_t       px         = 4;
 static const uint8_t SEG_WAIT[] = { SEG_G };
 static bool          forw       = true;   // true = sweeping right→left
 
-static inline bool shouldShowColonDot(bool colonOn, bool stateDotOn) {
+// TM1637 uses SEG_DP on the second digit for the center separator.
+// With DISPLAY_STATE_INDICATOR_ON_COLON, the separator follows stateDotOn.
+// Otherwise it follows colonOn (classic blinking-colon behavior).
+static inline bool shouldShowDotSegment(bool colonOn, bool stateDotOn) {
 #if defined(DISPLAY_STATE_INDICATOR_ON_COLON)
     (void)colonOn;
     return stateDotOn;
@@ -100,10 +103,10 @@ void displaySetBrightness(uint8_t br) {
 void displayShowTime(int hour, int minute, bool colonOn, bool twelveHr, bool stateDotOn) {
     // 12-hr conversion: 0→12, 1-12→1-12, 13-23→1-11
     int dispHour = twelveHr ? (hour % 12 == 0 ? 12 : hour % 12) : hour;
-    bool colonOnSegment = shouldShowColonDot(colonOn, stateDotOn);
+    bool dotSegmentOn = shouldShowDotSegment(colonOn, stateDotOn);
     uint8_t digits[4] = {
         (uint8_t)(dispHour >= 10 ? mydisplay.encodeDigit(dispHour / 10) : 0x00),
-        (uint8_t)(mydisplay.encodeDigit(dispHour % 10) | (colonOnSegment ? SEG_DP : 0x00)),
+        (uint8_t)(mydisplay.encodeDigit(dispHour % 10) | (dotSegmentOn ? SEG_DP : 0x00)),
         mydisplay.encodeDigit(minute / 10),
 #if defined(DISPLAY_STATE_INDICATOR_ON_COLON)
         mydisplay.encodeDigit(minute % 10)
@@ -117,10 +120,11 @@ void displayShowTime(int hour, int minute, bool colonOn, bool twelveHr, bool sta
 void displayShowTimePartial(int hour, int minute, bool colonOn, bool twelveHr,
                             bool showHour, bool showMinute, bool stateDotOn) {
     int dispHour = twelveHr ? (hour % 12 == 0 ? 12 : hour % 12) : hour;
-    bool colonOnSegment = shouldShowColonDot(colonOn, stateDotOn);
+    bool dotSegmentOn = shouldShowDotSegment(colonOn, stateDotOn);
+    uint8_t hourUnits = showHour ? mydisplay.encodeDigit(dispHour % 10) : 0x00;
     uint8_t digits[4] = {
         (uint8_t)(showHour && dispHour >= 10 ? mydisplay.encodeDigit(dispHour / 10) : 0x00),
-        (uint8_t)((showHour ? mydisplay.encodeDigit(dispHour % 10) : 0x00) | (colonOnSegment ? SEG_DP : 0x00)),
+        (uint8_t)(hourUnits | (dotSegmentOn ? SEG_DP : 0x00)),
         (uint8_t)(showMinute ? mydisplay.encodeDigit(minute / 10) : 0x00),
 #if defined(DISPLAY_STATE_INDICATOR_ON_COLON)
         (uint8_t)(showMinute ? mydisplay.encodeDigit(minute % 10) : 0x00)
