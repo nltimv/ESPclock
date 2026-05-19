@@ -62,6 +62,7 @@ struct tm   timeinfo;
 #endif
 
 static const unsigned long AP_OFFLINE_WINDOW_MS  = 15UL * 60UL * 1000UL;
+static const unsigned long AP_SETUP_CONFIRM_WINDOW_MS = 5UL * 1000UL;
 static const unsigned long BUTTON_DEBOUNCE_MS    = 35UL;
 static const unsigned long BUTTON_SHORT_PRESS_MS = 80UL;
 static const unsigned long BUTTON_LONG_PRESS_MS  = 1200UL;
@@ -360,7 +361,9 @@ void loop() {
 #endif
 
     // Shut down AP after the offline-mode boot window.
-    if (ap_shutdown_pending && (millis() - ap_shutdown_start) >= AP_OFFLINE_WINDOW_MS) {
+    const unsigned long ap_shutdown_window_ms =
+        setup_mode ? AP_OFFLINE_WINDOW_MS : AP_SETUP_CONFIRM_WINDOW_MS;
+    if (ap_shutdown_pending && (millis() - ap_shutdown_start) >= ap_shutdown_window_ms) {
         WiFi.mode(WIFI_STA);
         ap_shutdown_pending = false;
     }

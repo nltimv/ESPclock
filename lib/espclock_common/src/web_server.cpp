@@ -197,10 +197,12 @@ void setupRoutes() {
             configTzTime(tz_posix, ntp_addr);
             start_NtpClient = true;
 
-            // Once timezone is set, we are now in online mode.
+            // Once timezone is set, we are now in online mode. Keep the AP
+            // alive briefly so the browser can render the completion message
+            // before loop() switches to STA-only mode.
             setup_mode = false;
-            ap_shutdown_pending = false;
-            WiFi.mode(WIFI_STA);
+            ap_shutdown_start = millis();
+            ap_shutdown_pending = true;
 
             request->send(200, "application/json", "{\"status\":\"ok\"}");
         }

@@ -19,6 +19,7 @@ The following changes have been made in this fork by
 - Dual-button reset now keeps `88:88` visible continuously from the 5-second hint point until reset at 10 seconds (or button release).
 - Offline reset now also resets the clock time back to `00:00` when triggered.
 - Fixed first-time online setup flow so the AP stays available after Wi-Fi connection until timezone is submitted, then transitions to STA-only mode.
+- Restored the post-timezone setup confirmation by delaying the final AP shutdown briefly so the browser can show the completion message before switching to STA-only mode.
 
 ---
 
