@@ -361,6 +361,9 @@ void loop() {
 #endif
 
     // Shut down AP after the offline-mode boot window.
+    // setup_mode flips to false in /setup_timezone before we start the final
+    // AP shutdown timer, so false here means the short post-confirmation grace
+    // period rather than the initial offline onboarding window.
     const unsigned long ap_shutdown_window_ms =
         setup_mode ? AP_OFFLINE_WINDOW_MS : AP_SETUP_CONFIRM_WINDOW_MS;
     if (ap_shutdown_pending && (millis() - ap_shutdown_start) >= ap_shutdown_window_ms) {
