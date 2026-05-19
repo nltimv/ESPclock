@@ -10,9 +10,9 @@ The following changes have been made in this fork by
 
 ## 2026-05-19
 
-### TM1637 display: removed colon and decimal-point output (`lib/espclock_common/src/display.cpp`, `platformio.ini`)
-- Removed all colon and dot segment output from the TM1637 driver; the decimal-point and colon LEDs are not wired on the target module.
-- Removed the `DISPLAY_STATE_INDICATOR_ON_COLON` build flag from TM1637 environments as it is no longer needed.
+### TM1637 display: restored blinking colon output (`lib/espclock_common/src/display.cpp`, `platformio.ini`)
+- Restored TM1637 colon-segment blinking behavior in the time display path.
+- Re-enabled the `DISPLAY_STATE_INDICATOR_ON_COLON` build flag for TM1637 environments.
 
 ### Button input and time setup improvements (`src/espclock.cpp`, `lib/espclock_common/src/display_api.h`, `lib/espclock_common/src/display.cpp`)
 - Removed date-display and date-editing fields from the button interaction model to simplify the user experience.
