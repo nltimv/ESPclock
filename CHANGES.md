@@ -15,6 +15,7 @@ The following changes have been made in this fork by
 - Simplified display and edit-mode rendering by removing date-editing screens and making only the active time field blink during manual setup.
 - Updated button-driven setup UX: long-press setup enters time editing immediately, action-button hold cycles values continuously, and 12h/24h selection is shown as `12h`/`24h`.
 - Added clearer dual-button reset flow with continuous `88:88` hold feedback, offline-mode reset, and clock reset to `00:00`.
+- Reset the internal one-second timer anchor whenever the clock time is changed in offline/manual flows, so timing restarts cleanly from `:00`.
 
 ### First-time setup flow reliability (`src/espclock.cpp`, `lib/espclock_common/src/web_server.cpp`)
 - Kept AP setup available through Wi-Fi connection until timezone submission, then switched to STA-only mode.

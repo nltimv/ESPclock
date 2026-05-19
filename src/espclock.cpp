@@ -111,6 +111,7 @@ static void setClockFromTm(const tm &src) {
     if (epoch < 0) return;
     timeval tv = {epoch, 0};
     settimeofday(&tv, nullptr);
+    myTimerReset();
 }
 
 static void setDefaultClockTime() {

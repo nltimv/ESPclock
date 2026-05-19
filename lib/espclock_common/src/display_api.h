@@ -26,6 +26,7 @@ extern uint8_t brightness;
 // NOTE: uses a single shared static counter — do not call concurrently with
 //       different intervals from ISR context.
 unsigned long myTimer(unsigned long everywhen);
+void          myTimerReset(); // reset the shared internal timer counter to now
 
 // ── Display control ────────────────────────────────────────────────────────
 void displayInit();                    // initialise hardware, set max brightness

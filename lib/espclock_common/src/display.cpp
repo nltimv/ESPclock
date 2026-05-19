@@ -22,15 +22,20 @@ bool    twelve     = false;
 uint8_t brightness = 7;
 
 // ── Non-blocking timer ─────────────────────────────────────────────────────
+static unsigned long g_timer_anchor_ms = 0;
+
 unsigned long myTimer(unsigned long everywhen) {
-    static unsigned long t1;
-    unsigned long diff_time = millis() - t1;
+    unsigned long diff_time = millis() - g_timer_anchor_ms;
     int ret = 0;
     if (diff_time >= everywhen) {
-        t1 = millis();
+        g_timer_anchor_ms = millis();
         ret = 1;
     }
     return ret;
+}
+
+void myTimerReset() {
+    g_timer_anchor_ms = millis();
 }
 
 // ══════════════════════════════════════════════════════════════════════════
