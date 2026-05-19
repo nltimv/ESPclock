@@ -59,9 +59,13 @@ static uint8_t       px         = 4;
 static const uint8_t SEG_WAIT[] = { SEG_G };
 static bool          forw       = true;   // true = sweeping right→left
 
-// TM1637 uses SEG_DP on the second digit for the center separator.
-// With DISPLAY_STATE_INDICATOR_ON_COLON, the separator follows stateDotOn.
-// Otherwise it follows colonOn (classic blinking-colon behavior).
+// Returns whether SEG_DP should be lit on TM1637 digit #2 (center separator).
+// Parameters:
+//   - colonOn: classic clock-colon blink state.
+//   - stateDotOn: connectivity/status indicator state.
+// Behavior:
+//   - With DISPLAY_STATE_INDICATOR_ON_COLON: uses stateDotOn.
+//   - Without DISPLAY_STATE_INDICATOR_ON_COLON: uses colonOn.
 static inline bool shouldShowDotSegment(bool colonOn, bool stateDotOn) {
 #if defined(DISPLAY_STATE_INDICATOR_ON_COLON)
     (void)colonOn;
@@ -136,19 +140,18 @@ void displayShowTimePartial(int hour, int minute, bool colonOn, bool twelveHr,
 }
 
 void displayShowHourMode(bool twelveHr, bool stateDotOn) {
+#if defined(DISPLAY_STATE_INDICATOR_ON_COLON)
+    uint8_t secondDigit = (uint8_t)(mydisplay.encodeDigit(twelveHr ? 2 : 4) | (stateDotOn ? SEG_DP : 0x00));
+    uint8_t fourthDigit = 0x00;
+#else
+    uint8_t secondDigit = mydisplay.encodeDigit(twelveHr ? 2 : 4);
+    uint8_t fourthDigit = (uint8_t)(stateDotOn ? SEG_DP : 0x00);
+#endif
     uint8_t digits[4] = {
         mydisplay.encodeDigit(twelveHr ? 1 : 2),
-        (uint8_t)(mydisplay.encodeDigit(twelveHr ? 2 : 4)
-#if defined(DISPLAY_STATE_INDICATOR_ON_COLON)
-                  | (stateDotOn ? SEG_DP : 0x00)
-#endif
-        ),
+        secondDigit,
         SEG_h,
-#if defined(DISPLAY_STATE_INDICATOR_ON_COLON)
-        0x00
-#else
-        (uint8_t)(stateDotOn ? SEG_DP : 0x00)
-#endif
+        fourthDigit
     };
     mydisplay.setSegments(digits, 4, 0);
 }
