@@ -83,7 +83,6 @@ static EditField     edit_field              = EditField::NONE;
 static tm            edit_time               = {};
 static bool          show_edit_value         = true;
 static unsigned long edit_flash_toggle_at    = 0;
-static bool          state_dot_phase         = true;
 
 struct ButtonState {
     bool          raw_state = false;
@@ -139,16 +138,6 @@ static void showResetConfirmFeedback() {
     }
 }
 
-static bool isStateDotOn() {
-    if (!setup_mode) {
-        return true;
-    }
-    if (ap_shutdown_pending) {
-        return state_dot_phase;
-    }
-    return false;
-}
-
 static void startTimeSetup() {
     loadCurrentTime(edit_time);
     in_time_setup        = true;
@@ -192,7 +181,6 @@ static void cycleCurrentValue() {
 }
 
 static void renderEditScreen() {
-    bool stateDotOn = isStateDotOn();
     if ((millis() - edit_flash_toggle_at) >= EDIT_FLASH_MS) {
         show_edit_value      = !show_edit_value;
         edit_flash_toggle_at = millis();
@@ -201,21 +189,21 @@ static void renderEditScreen() {
     switch (edit_field) {
         case EditField::TWELVE_24:
             if (show_edit_value) {
-                displayShowHourMode(twelve, stateDotOn);
+                displayShowHourMode(twelve, false);
             } else {
                 displayClear();
             }
             break;
         case EditField::HOUR:
             displayShowTimePartial(edit_time.tm_hour, edit_time.tm_min, true, twelve,
-                                   show_edit_value, true, stateDotOn);
+                                   show_edit_value, true, false);
             break;
         case EditField::MINUTE:
             displayShowTimePartial(edit_time.tm_hour, edit_time.tm_min, true, twelve,
-                                   true, show_edit_value, stateDotOn);
+                                   true, show_edit_value, false);
             break;
         default:
-            displayShowTime(timeinfo.tm_hour, timeinfo.tm_min, true, twelve, stateDotOn);
+            displayShowTime(timeinfo.tm_hour, timeinfo.tm_min, true, twelve, false);
             break;
     }
 }
@@ -397,12 +385,6 @@ void loop() {
     loadCurrentTime(timeinfo);
 
     if (myTimer(1000)) {
-        if (setup_mode && ap_shutdown_pending) {
-            state_dot_phase = !state_dot_phase;
-        } else {
-            state_dot_phase = true;
-        }
-
         // Auto-brightness: adjust at transition hours
         if (br_auto) {
             switch (timeinfo.tm_hour) {
@@ -422,10 +404,8 @@ void loop() {
         displayShowTime(88, 88, true, false, false);
     } else if (in_time_setup) {
         renderEditScreen();
-    } else if (blink) {
-        displayShowTime(timeinfo.tm_hour, timeinfo.tm_min, colon, twelve, isStateDotOn());
     } else {
-        displayShowTime(timeinfo.tm_hour, timeinfo.tm_min, true, twelve, isStateDotOn());
+        displayShowTime(timeinfo.tm_hour, timeinfo.tm_min, colon, twelve, false);
     }
 
     // ── WiFi connection ────────────────────────────────────────────────────

@@ -10,9 +10,13 @@ The following changes have been made in this fork by
 
 ## 2026-05-19
 
-### TM1637 display: restored blinking colon output (`lib/espclock_common/src/display.cpp`, `platformio.ini`)
-- Restored TM1637 colon-segment blinking behavior in the time display path.
-- Re-enabled the `DISPLAY_STATE_INDICATOR_ON_COLON` build flag for TM1637 environments.
+### Time display indicator behavior (`src/espclock.cpp`, `lib/espclock_common/src/display.cpp`, `platformio.ini`)
+- Removed online/offline state-indicator rendering from the clock face across display drivers.
+- Restored the classic time behavior where the center colon blinks every second while time is shown.
+
+### TM1637 display updates (`lib/espclock_common/src/display.cpp`, `platformio.ini`)
+- Kept TM1637 center-separator behavior aligned with classic time colon blinking.
+- Removed now-unused TM1637 status-indicator build-flag wiring.
 
 ### Button input and time setup improvements (`src/espclock.cpp`, `lib/espclock_common/src/display_api.h`, `lib/espclock_common/src/display.cpp`)
 - Removed date-display and date-editing fields from the button interaction model to simplify the user experience.
@@ -24,8 +28,6 @@ The following changes have been made in this fork by
 - Offline reset now also resets the clock time back to `00:00` when triggered.
 - Fixed first-time online setup flow so the AP stays available after Wi-Fi connection until timezone is submitted, then transitions to STA-only mode.
 - Restored the post-timezone setup confirmation by delaying the final AP shutdown briefly so the browser can show the completion message before switching to STA-only mode.
-- Added a last-digit dot state indicator for offline/AP-online status, moved the local `12h`/`24h` choice ahead of hour/minute editing, and blocked manual time setup while the clock is in online mode.
-- For TM1637 builds, added a fallback that mirrors the state indicator onto the center colon so the status remains visible on modules where the last-digit dot is not wired.
 
 ---
 
