@@ -94,6 +94,24 @@ void displayShowTime(int hour, int minute, bool colonOn, bool twelveHr) {
     mydisplay.showNumberDecEx(minute,   colonMask, true,  2, 2);
 }
 
+void displayShowTimePartial(int hour, int minute, bool colonOn, bool twelveHr,
+                            bool showHour, bool showMinute) {
+    int dispHour = twelveHr ? (hour % 12 == 0 ? 12 : hour % 12) : hour;
+    uint8_t colonMask = colonOn ? 0b01000000 : 0;
+    if (showHour) {
+        mydisplay.showNumberDecEx(dispHour, colonMask, false, 2, 0);
+    } else {
+        uint8_t blank[2] = {0x00, colonMask};
+        mydisplay.setSegments(blank, 2, 0);
+    }
+    if (showMinute) {
+        mydisplay.showNumberDecEx(minute, colonMask, true, 2, 2);
+    } else {
+        static const uint8_t blank[2] = {0x00, 0x00};
+        mydisplay.setSegments(blank, 2, 2);
+    }
+}
+
 void displayAnim() {
     if (myTimer(500)) {
         if (forw) {                         // sweep 4 → 0
@@ -160,6 +178,29 @@ void displayShowTime(int hour, int minute, bool colonOn, bool twelveHr) {
     // TM16xx: bit 2 (0x04) of the dot-mask controls the colon
     uint8_t dotMask = colonOn ? 0x04 : 0x00;
     display.setDisplayToDecNumber(timeVal, dotMask, true);
+}
+
+void displayShowTimePartial(int hour, int minute, bool colonOn, bool twelveHr,
+                            bool showHour, bool showMinute) {
+    if (showHour && showMinute) {
+        displayShowTime(hour, minute, colonOn, twelveHr);
+        return;
+    }
+    int dispHour = twelveHr ? (hour % 12 == 0 ? 12 : hour % 12) : hour;
+    if (showHour) {
+        module.setDisplayDigit(dispHour / 10, 0, true);
+        module.setDisplayDigit(dispHour % 10, 1, true);
+    } else {
+        module.setSegments(0x00, 0);
+        module.setSegments(0x00, 1);
+    }
+    if (showMinute) {
+        module.setDisplayDigit(minute / 10, 2, true);
+        module.setDisplayDigit(minute % 10, 3, true);
+    } else {
+        module.setSegments(0x00, 2);
+        module.setSegments(0x00, 3);
+    }
 }
 
 void displayAnim() {

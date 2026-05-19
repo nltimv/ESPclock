@@ -35,4 +35,8 @@ void displayShowTrying();              // show "trY" while connecting to WiFi
 void displayShowAttempt(uint8_t n);    // show attempt-counter digit n
 void displaySetBrightness(uint8_t br); // apply a new brightness level
 void displayShowTime(int hour, int minute, bool colonOn, bool twelveHr); // render clock face
+// Like displayShowTime, but showHour/showMinute control which field is visible.
+// Pass showHour=false to blank the hour digits, showMinute=false to blank minute digits.
+void displayShowTimePartial(int hour, int minute, bool colonOn, bool twelveHr,
+                            bool showHour, bool showMinute);
 void displayAnim();                    // bouncing-dot waiting animation

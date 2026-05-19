@@ -65,17 +65,15 @@ static const unsigned long AP_OFFLINE_WINDOW_MS  = 15UL * 60UL * 1000UL;
 static const unsigned long BUTTON_DEBOUNCE_MS    = 35UL;
 static const unsigned long BUTTON_SHORT_PRESS_MS = 80UL;
 static const unsigned long BUTTON_LONG_PRESS_MS  = 1200UL;
-static const unsigned long DATE_VIEW_MS          = 3000UL;
 static const unsigned long EDIT_FLASH_MS         = 450UL;
+static const unsigned long RESET_HINT_MS         = 5000UL;
+static const unsigned long RESET_HOLD_MS         = 10000UL;
 
 enum class EditField : uint8_t {
     NONE = 0,
     HOUR,
     MINUTE,
-    TWELVE_24,
-    YEAR,
-    DAY,
-    MONTH
+    TWELVE_24
 };
 
 static bool          in_time_setup           = false;
@@ -83,8 +81,6 @@ static EditField     edit_field              = EditField::NONE;
 static tm            edit_time               = {};
 static bool          show_edit_value         = true;
 static unsigned long edit_flash_toggle_at    = 0;
-static bool          show_date_until_timeout = false;
-static unsigned long show_date_until_ms      = 0;
 
 struct ButtonState {
     bool          raw_state = false;
@@ -95,18 +91,13 @@ struct ButtonState {
     bool          long_released = false;
 };
 
-static ButtonState setup_button;
-static ButtonState action_button;
-
-static int daysInMonth(int year, int month) {
-    static const int month_days[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
-    int d = month_days[month - 1];
-    if (month == 2) {
-        bool leap = ((year % 4 == 0) && (year % 100 != 0)) || (year % 400 == 0);
-        if (leap) d = 29;
-    }
-    return d;
-}
+static ButtonState   setup_button;
+static ButtonState   action_button;
+static bool          both_held_active    = false;
+static unsigned long both_held_since_ms  = 0;
+static bool          reset_hint_shown    = false;
+static bool          reset_done          = false;
+static bool          combo_in_progress   = false;
 
 static void setClockFromTm(const tm &src) {
     tm copy = src;
@@ -133,9 +124,18 @@ static void loadCurrentTime(tm &dst) {
     localtime_r(&now, &dst);
 }
 
-static void startDateView() {
-    show_date_until_timeout = true;
-    show_date_until_ms      = millis() + DATE_VIEW_MS;
+static void showResetHintFeedback() {
+    displayShowTime(88, 88, true, false);
+    delay(220);
+}
+
+static void showResetConfirmFeedback() {
+    for (uint8_t i = 0; i < 2; ++i) {
+        displayClear();
+        delay(140);
+        displayShowTime(0, 0, true, false);
+        delay(140);
+    }
 }
 
 static void startTimeSetup() {
@@ -144,17 +144,13 @@ static void startTimeSetup() {
     edit_field           = EditField::HOUR;
     show_edit_value      = true;
     edit_flash_toggle_at = millis();
-    show_date_until_timeout = false;
 }
 
 static void advanceTimeSetupField() {
     switch (edit_field) {
         case EditField::HOUR:      edit_field = EditField::MINUTE;    break;
         case EditField::MINUTE:    edit_field = EditField::TWELVE_24; break;
-        case EditField::TWELVE_24: edit_field = EditField::YEAR;      break;
-        case EditField::YEAR:      edit_field = EditField::DAY;       break;
-        case EditField::DAY:       edit_field = EditField::MONTH;     break;
-        case EditField::MONTH:
+        case EditField::TWELVE_24:
             setClockFromTm(edit_time);
             in_time_setup = false;
             edit_field    = EditField::NONE;
@@ -177,28 +173,6 @@ static void cycleCurrentValue() {
         case EditField::TWELVE_24:
             twelve = !twelve;
             break;
-        case EditField::YEAR: {
-            int year = (edit_time.tm_year + 1900) + 1;
-            if (year > 2099) year = 2000;
-            edit_time.tm_year = year - 1900;
-            int maxDay = daysInMonth(year, edit_time.tm_mon + 1);
-            if (edit_time.tm_mday > maxDay) edit_time.tm_mday = maxDay;
-            break;
-        }
-        case EditField::DAY: {
-            int year  = edit_time.tm_year + 1900;
-            int month = edit_time.tm_mon + 1;
-            int maxDay = daysInMonth(year, month);
-            edit_time.tm_mday++;
-            if (edit_time.tm_mday > maxDay) edit_time.tm_mday = 1;
-            break;
-        }
-        case EditField::MONTH: {
-            edit_time.tm_mon = (edit_time.tm_mon + 1) % 12;
-            int maxDay = daysInMonth(edit_time.tm_year + 1900, edit_time.tm_mon + 1);
-            if (edit_time.tm_mday > maxDay) edit_time.tm_mday = maxDay;
-            break;
-        }
         default:
             break;
     }
@@ -212,29 +186,21 @@ static void renderEditScreen() {
         edit_flash_toggle_at = millis();
     }
 
-    if (!show_edit_value) {
-        displayClear();
-        return;
-    }
-
     switch (edit_field) {
         case EditField::HOUR:
+            displayShowTimePartial(edit_time.tm_hour, edit_time.tm_min, true, twelve,
+                                   show_edit_value, true);
+            break;
         case EditField::MINUTE:
-            displayShowTime(edit_time.tm_hour, edit_time.tm_min, true, twelve);
+            displayShowTimePartial(edit_time.tm_hour, edit_time.tm_min, true, twelve,
+                                   true, show_edit_value);
             break;
         case EditField::TWELVE_24:
-            displayShowTime(twelve ? 12 : 24, 0, false, false);
-            break;
-        case EditField::YEAR: {
-            int year = edit_time.tm_year + 1900;
-            displayShowTime(year / 100, year % 100, false, false);
-            break;
-        }
-        case EditField::DAY:
-            displayShowTime(0, edit_time.tm_mday, false, false);
-            break;
-        case EditField::MONTH:
-            displayShowTime(0, edit_time.tm_mon + 1, false, false);
+            if (show_edit_value) {
+                displayShowTime(twelve ? 12 : 24, 0, false, false);
+            } else {
+                displayClear();
+            }
             break;
         default:
             displayShowTime(timeinfo.tm_hour, timeinfo.tm_min, true, twelve);
@@ -277,17 +243,46 @@ static void handleButtonInput() {
     updateButton(setup_button, SETUP_BUTTON_PIN);
     updateButton(action_button, ACTION_BUTTON_PIN);
 
-    if (setup_button.long_released && !in_time_setup) {
-        startTimeSetup();
-    } else if (setup_button.short_released && in_time_setup) {
-        advanceTimeSetupField();
+    unsigned long now = millis();
+    bool both_held = setup_button.debounced_state && action_button.debounced_state;
+
+    if (both_held && !both_held_active) {
+        both_held_active   = true;
+        both_held_since_ms = now;
+        reset_hint_shown   = false;
+        reset_done         = false;
+        combo_in_progress  = true;
     }
 
-    if (action_button.short_released) {
-        if (in_time_setup) {
+    if (!both_held) {
+        both_held_active = false;
+        if (!setup_button.debounced_state && !action_button.debounced_state) {
+            combo_in_progress = false;
+        }
+    }
+
+    if (both_held_active) {
+        unsigned long held = now - both_held_since_ms;
+        if (held >= RESET_HINT_MS && !reset_hint_shown) {
+            showResetHintFeedback();
+            reset_hint_shown = true;
+        }
+        if (held >= RESET_HOLD_MS && !reset_done) {
+            switchToOfflineMode(true);
+            showResetConfirmFeedback();
+            reset_done = true;
+        }
+    }
+
+    if (!combo_in_progress) {
+        if (setup_button.long_released && !in_time_setup) {
+            startTimeSetup();
+        } else if (setup_button.short_released && in_time_setup) {
+            advanceTimeSetupField();
+        }
+
+        if (action_button.short_released && in_time_setup) {
             cycleCurrentValue();
-        } else {
-            startDateView();
         }
     }
 }
@@ -364,10 +359,6 @@ void loop() {
     // ── Clock display ──────────────────────────────────────────────────────
     loadCurrentTime(timeinfo);
 
-    if (show_date_until_timeout && millis() >= show_date_until_ms) {
-        show_date_until_timeout = false;
-    }
-
     if (myTimer(1000)) {
         // Auto-brightness: adjust at transition hours
         if (br_auto) {
@@ -386,8 +377,6 @@ void loop() {
 
     if (in_time_setup) {
         renderEditScreen();
-    } else if (show_date_until_timeout) {
-        displayShowTime(timeinfo.tm_mon + 1, timeinfo.tm_mday, false, false);
     } else if (blink) {
         displayShowTime(timeinfo.tm_hour, timeinfo.tm_min, colon, twelve);
     } else {

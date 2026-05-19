@@ -8,6 +8,15 @@ The following changes have been made in this fork by
 
 ---
 
+## 2026-05-19
+
+### Button input and time setup improvements (`src/espclock.cpp`, `lib/espclock_common/src/display_api.h`, `lib/espclock_common/src/display.cpp`)
+- Removed date-display and date-editing fields from the button interaction model to simplify the user experience.
+- Fixed time setup blinking so only the currently edited field (hour or minute) flashes rather than the entire display.
+- Added a dual-button hold gesture (both buttons held 5s for visual hint, 10s to reset to offline mode).
+
+---
+
 ## 2026-05-18
 
 ### Device identity defaults (`lib/espclock_common/src/wifi_manager.*`, `src/espclock.cpp`, `platformio.ini`)
