@@ -8,6 +8,14 @@ The following changes have been made in this fork by
 
 ---
 
+## 2026-05-20
+
+### User manual (`docs/`)
+- Added a user manual covering online (Wi-Fi/NTP) and offline (manual buttons) setup, clock settings, reset procedure, and troubleshooting.
+- Created a Docker-based build pipeline (`docs/scripts/`) that converts the Markdown source into a foldable A4 landscape booklet PDF using pandoc, pdflatex, and pdfjam.
+
+---
+
 ## 2026-05-19
 
 ### Display and time setup behavior (`src/espclock.cpp`, `lib/espclock_common/src/display_api.h`, `lib/espclock_common/src/display.cpp`)
