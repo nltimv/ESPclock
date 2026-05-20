@@ -8,12 +8,35 @@ The following changes have been made in this fork by
 
 ---
 
+## 2026-05-19
+
+### Display and time setup behavior (`src/espclock.cpp`, `lib/espclock_common/src/display_api.h`, `lib/espclock_common/src/display.cpp`)
+- Removed online/offline state-indicator rendering from the clock face; time display now consistently uses the classic blinking center colon behavior.
+- Simplified display and edit-mode rendering by removing date-editing screens and making only the active time field blink during manual setup.
+- Updated button-driven setup UX: long-press setup enters time editing immediately, action-button hold cycles values continuously, and 12h/24h selection is shown as `12h`/`24h`.
+- Added clearer dual-button reset flow with continuous `88:88` hold feedback, offline-mode reset, and clock reset to `00:00`.
+- Reset the internal one-second timer anchor whenever the clock time is changed in offline/manual flows, so timing restarts cleanly from `:00`.
+
+### First-time setup flow reliability (`src/espclock.cpp`, `lib/espclock_common/src/web_server.cpp`)
+- Kept AP setup available through Wi-Fi connection until timezone submission, then switched to STA-only mode.
+- Preserved setup-complete feedback by delaying final AP shutdown briefly so completion pages can render reliably.
+
+---
+
 ## 2026-05-18
 
 ### Device identity defaults (`lib/espclock_common/src/wifi_manager.*`, `src/espclock.cpp`, `platformio.ini`)
 - Changed the default `DEVICE_ID` behavior to generate a deterministic ID from the hardware MAC address, so reflashing the same board keeps the same identity without manual build flags.
 - Reduced the default MAC-derived `DEVICE_ID` to the last 6 hexadecimal characters for shorter AP/mDNS names.
 - Kept `DEVICE_ID` build-flag override support for users who still want custom IDs.
+
+### Offline/online operation and button control (`src/espclock.cpp`, `lib/espclock_common/src/wifi_manager.*`, `lib/espclock_common/src/web_server.cpp`, `platformio.ini`)
+- Repurposed setup/normal behavior into offline/online modes, with offline AP availability limited to a 15-minute boot window and default clock start at 00:00.
+- Added two debounced GPIO push buttons for local time setup (hours, minutes, 12/24h) and dual-button reset back to offline mode.
+- Added reset flow feedback on dual-button hold and aligned config-reset handling to consistently return the device to offline onboarding mode.
+
+### Web UI wording (`data/index.html`)
+- Updated setup-related labels/messages to use clearer offline/online language for non-technical users.
 
 ### 3D model improvements
 - Removed touch sensor cutout for bold case

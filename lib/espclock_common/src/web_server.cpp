@@ -167,7 +167,7 @@ void setupRoutes() {
         }
     );
 
-    // First-time timezone setup: persist the timezone and schedule AP shutdown
+    // First-time timezone setup: persist the timezone and finish offline mode
     server.on("/setup_timezone", HTTP_POST,
         [](AsyncWebServerRequest *request) {},
         NULL,
@@ -197,8 +197,11 @@ void setupRoutes() {
             configTzTime(tz_posix, ntp_addr);
             start_NtpClient = true;
 
-            // Schedule AP shutdown after a 15-second grace period
-            ap_shutdown_start   = millis();
+            // Once timezone is set, we are now in online mode. Keep the AP
+            // alive briefly so the browser can render the completion message
+            // before loop() switches to STA-only mode.
+            setup_mode = false;
+            ap_shutdown_start = millis();
             ap_shutdown_pending = true;
 
             request->send(200, "application/json", "{\"status\":\"ok\"}");
@@ -309,20 +312,11 @@ void setupRoutes() {
                 fc.close();
                 Serial.println(F("\nCONFIG SAVED"));
 
-            } else if (LittleFS.exists("/config.json") && saveconfig == 0) {
-                // Delete config and return to setup mode
-                LittleFS.remove("/config.json");
-                WiFi.disconnect();
-                connected           = false;
-                creds_available     = false;
-                start_NtpClient     = false;
-                attempts            = 0;
-                setup_mode          = true;
-                ap_shutdown_pending = false;
-                WiFi.mode(WIFI_AP_STA);
-                WiFi.softAP(esp_ssid, esp_password, false, 2);
-                Serial.println(F("\n*Config.json DELETED*"));
-            }
+                } else if (saveconfig == 0) {
+                    // Delete config and return to offline mode
+                    switchToOfflineMode(true);
+                    Serial.println(F("\n*Config.json DELETED*"));
+                }
 
             request->send(200, "application/json", "{\"status\":\"updated\"}");
         }
