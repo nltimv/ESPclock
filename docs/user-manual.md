@@ -25,7 +25,7 @@ classoption: oneside
 
 \vfill
 
-{\normalsize ESPclock Project\par}
+{\normalsize ESPclock Project by telepath9 and nltimv\par}
 {\small Wi-Fi Enabled Desk Clock\par}
 
 \vspace{1cm}
@@ -92,7 +92,7 @@ network (a "hotspot") for 15 minutes.
 1. On your phone or computer, open the **Wi-Fi settings**.
 2. Look for a network named **ESPclock-XXXXXX** (where XXXXXX is a unique
    code for your clock).
-3. Connect to it using the password: **`waltwhite64`**
+3. Connect to it using the password: **`espclock`**
 
 > **Tip:** The clock's hotspot is only active for 15 minutes after powering
 > on. If you miss it, simply unplug the clock and plug it back in.
@@ -115,10 +115,6 @@ On the setup page you will see a **Wi-Fi Settings** section:
 2. Enter your Wi-Fi **password** in the password field.
    - You can tap the eye icon to show/hide the password.
 3. Tap **CONNECT**.
-
-The clock will now try to connect. You will see an animated status indicator.
-If the connection is successful, you will see a green checkmark and the
-clock's new IP address on your home network.
 
 > **If connection fails:** Double-check your Wi-Fi password and try again.
 
@@ -160,23 +156,23 @@ Once in time edit mode, you will go through three steps:
 ### 1. Choose 12-Hour or 24-Hour Format
 
 - The display will show either **12h** or **24h**.
-- **Hold** the **A button** (Action) to switch between formats.
-- **Press** the **A button** briefly to confirm and move on.
+- **Press** the **A button** to switch between formats.
+- **Press** the **S button** to confirm and move on.
 
 ### 2. Set the Hour
 
 - The hour digits will blink.
-- **Hold** the **A button** to increase the hour.
+- **Press** the **A button** to increase the hour.
   The value will cycle from 0 through 23 (or 1 through 12 in 12-hour mode)
   and wrap around.
-- **Press** the **A button** briefly to confirm and move to minutes.
+- **Press** the **S button** to confirm and move to minutes.
 
 ### 3. Set the Minutes
 
 - The minute digits will blink.
-- **Hold** the **A button** to increase the minutes.
+- **Press** the **A button** to increase the minutes.
   The value will cycle from 0 through 59 and wrap around.
-- **Press** the **A button** briefly to confirm.
+- **Press** the **S button** to confirm.
 
 The clock will now start keeping time from the values you set.
 
@@ -221,11 +217,9 @@ If you want to erase all settings and start over (for example, to connect to
 a different Wi-Fi network):
 
 1. **Press and hold both buttons (S and A)** at the same time.
-2. Keep holding — after about **5 seconds** the display will show `88:88` to
-   let you know the reset is being registered.
-3. **Continue holding** until the display flashes on and off (at about
+2. **Continue holding** until the display flashes the digits `0:00` on and off (at about
    **10 seconds**). This confirms the reset is complete.
-4. You can now **release both buttons**. The clock will restart in offline
+3. You can now **release both buttons**. The clock will restart in offline
    you can set it up from scratch.
 
 > You can also reset the clock from the web interface by tapping **DELETE**
@@ -274,12 +268,13 @@ entering the password for your home Wi-Fi — not the clock's hotspot password.
 | Change settings | Scan QR code on bottom of clock |
 | Set time manually | Hold S button 2 sec → use A button to set |
 | Reset the clock | Hold both buttons (S + A) for 10 seconds |
-| Hotspot password | `waltwhite64` |
+| Hotspot password | `espclock` |
 
 ---
 
-*ESPclock — an open-source project licensed under GPL-3.0.*
-*Visit https://github.com/nltimv for more information.*
+*ESPclock — an open-source project licensed under GPL-3.0, available at https://www.gnu.org/licenses/gpl-3.0.en.html *
+
+*Visit https://github.com/nltimv for more information and the source code of the clock.*
 
 \newpage
 
@@ -346,7 +341,7 @@ Wi-Fi-netwerk (een "hotspot") aan, dat 15 minuten actief blijft.
 1. Open de **Wi-Fi-instellingen** op uw telefoon of computer.
 2. Zoek een netwerk met de naam **ESPclock-XXXXXX** (waarbij XXXXXX een
    unieke code is voor uw klok).
-3. Maak verbinding met het wachtwoord: **`waltwhite64`**
+3. Maak verbinding met het wachtwoord: **`espclock`**
 
 > **Tip:** De hotspot van de klok is slechts 15 minuten actief na het
 > inschakelen. Als u deze mist, trek de stekker eruit en sluit de klok
@@ -371,10 +366,6 @@ Op de instellingenpagina ziet u het onderdeel **Wi-Fi Settings**:
    - U kunt op het oogpictogram tikken om het wachtwoord te
      tonen/verbergen.
 3. Tik op **CONNECT**.
-
-De klok probeert nu verbinding te maken. U ziet een geanimeerde
-statusindicator. Bij een geslaagde verbinding verschijnt een groen
-vinkje en het nieuwe IP-adres van de klok op uw thuisnetwerk.
 
 > **Als de verbinding mislukt:** controleer uw Wi-Fi-wachtwoord en
 > probeer het opnieuw.
@@ -420,24 +411,24 @@ In de tijdinstelmodus doorloopt u drie stappen:
 ### 1. Kies 12-uurs- of 24-uursnotatie
 
 - Het display toont **12h** of **24h**.
-- **Houd** de **A-knop** (Action) ingedrukt om te wisselen.
-- **Druk** kort op de **A-knop** om te bevestigen en verder te gaan.
+- **Druk** op de **A-knop** om de instelling aan te passen.
+- **Druk** op de **S-knop** om te bevestigen en verder te gaan.
 
 ### 2. Stel het uur in
 
 - De urcijfers knipperen.
-- **Houd** de **A-knop** ingedrukt om het uur te verhogen. De waarde
+- **Druk** op de **A-knop** om het uur te verhogen. De waarde
   loopt van 0 tot 23 (of 1 tot 12 in 12-uursmodus) en begint daarna
   opnieuw.
-- **Druk** kort op de **A-knop** om te bevestigen en naar de minuten te
+- **Druk** op de **A-knop** om te bevestigen en naar de minuten te
   gaan.
 
 ### 3. Stel de minuten in
 
 - De minutencijfers knipperen.
-- **Houd** de **A-knop** ingedrukt om de minuten te verhogen. De waarde
+- **Druk** op de **A-knop** ingedrukt om de minuten te verhogen. De waarde
   loopt van 0 tot 59 en begint daarna opnieuw.
-- **Druk** kort op de **A-knop** om te bevestigen.
+- **Druk** op de **A-knop** om te bevestigen.
 
 De klok begint nu de tijd bij te houden vanaf de ingestelde waarden.
 
@@ -484,11 +475,9 @@ Als u alle instellingen wilt wissen en opnieuw wilt beginnen
 (bijvoorbeeld om verbinding te maken met een ander Wi-Fi-netwerk):
 
 1. **Houd beide knoppen (S en A)** tegelijkertijd ingedrukt.
-2. Blijf vasthouden — na ongeveer **5 seconden** toont het display
-   `88:88` om aan te geven dat de reset wordt geregistreerd.
-3. **Blijf vasthouden** totdat het display aan en uit flitst (na
+2. **Blijf vasthouden** totdat het display de cijfers `0:00` aan en uit flitst (na
    ongeveer **10 seconden**). Dit bevestigt dat de reset is voltooid.
-4. U kunt nu **beide knoppen loslaten**. De klok start opnieuw op in
+3. U kunt nu **beide knoppen loslaten**. De klok start opnieuw op in
    offline modus en de hotspot wordt weer 15 minuten beschikbaar, zodat
    u de klok opnieuw kunt instellen.
 
@@ -541,9 +530,10 @@ de hotspot van de klok.
 | Instellingen wijzigen | Scan de QR-code op de onderkant van de klok |
 | Tijd handmatig instellen | Houd S-knop 2 sec. ingedrukt → gebruik A-knop |
 | Klok resetten | Houd beide knoppen (S + A) 10 seconden ingedrukt |
-| Hotspot-wachtwoord | `waltwhite64` |
+| Hotspot-wachtwoord | `espclock` |
 
 ---
 
-*ESPclock — een opensourceproject onder de GPL-3.0-licentie.*
-*Bezoek https://github.com/nltimv voor meer informatie.*
+*ESPclock — een opensourceproject onder de GPL-3.0-licentie, te raadplegen via https://www.gnu.org/licenses/gpl-3.0.en.html *
+
+*Bezoek https://github.com/nltimv/ESPClock voor meer informatie en de broncode van de klok.*

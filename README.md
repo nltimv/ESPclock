@@ -37,7 +37,7 @@ It uses a ESP8266 (Wemos D1 mini) or ESP32 (XIAO ESP32 C3).
 	1. General -> Build
 	2. General -> Upload
 
-6. Now let's connect PC or mobile to the ESPclock access point (SSID: `ESPclock-<DEVICE_ID>`, with the password: waltwhite64
+6. Now let's connect PC or mobile to the ESPclock access point (SSID: `ESPclock-<DEVICE_ID>`, with the password: espclock
 
 7. After connecting to the ESPclock's AP, open your browser and paste in the address bar: http://192.168.4.1/ (or `espclock-<DEVICE_ID>.local`).
 

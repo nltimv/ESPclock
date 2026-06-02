@@ -93,7 +93,7 @@
             <li>&#x25B6; <strong>Scan the QR code above</strong> with your phone camera.</li>
             <li>&#x25B6; Or <strong>tap the NFC tag</strong> on the back of the clock.</li>
             <li>&#x25B6; Or connect manually — network:
-                <code id="dlApSsid"></code>, password: <code>waltwhite64</code></li>
+                <code id="dlApSsid"></code>, password: <code>espclock</code></li>
           </ul>
 
           <p class="small" style="margin:8px 0 0">
@@ -251,7 +251,7 @@
       return `http://espclock-${deviceId}.local`;
     }
 
-    const AP_PASSWORD = "waltwhite64";
+    const AP_PASSWORD = "espclock";
 
     function wifiQrString(ssid, pw) {
       const esc = (s) => String(s).replace(/([\\;,":}])/g, '\\$1');

@@ -32,7 +32,7 @@ static char mdns_name_buf[32]  = "";
 const char *device_id          = device_id_buf;
 const char *esp_ssid           = esp_ssid_buf;
 const char *mdns_name          = mdns_name_buf;
-const char *esp_password = "waltwhite64";   // AP password (≥8 chars required)
+const char *esp_password = "espclock";   // AP password (≥8 chars required)
 
 // ── WiFi credential globals ────────────────────────────────────────────────
 const char *ssid;
