@@ -8,6 +8,15 @@ The following changes have been made in this fork by
 
 ---
 
+## 2026-06-08
+
+### Online time sync reliability (`src/espclock.cpp`)
+- Added an online-mode NTP scheduler that re-requests NTP synchronization at least once every 24 hours while connected.
+- Added bounded retry backoff (5 minutes up to 60 minutes) when the device has not yet acquired valid NTP time.
+- Added build-time override flag `NTP_RESYNC_INTERVAL_S` and a dedicated PlatformIO test environment that sets it to 300 seconds for quick validation.
+
+---
+
 ## 2026-05-20
 
 ### User manual (`docs/`)

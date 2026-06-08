@@ -61,6 +61,10 @@ struct tm   timeinfo;
 #define BUTTON_PIN_MODE INPUT_PULLUP
 #endif
 
+#ifndef NTP_RESYNC_INTERVAL_S
+#define NTP_RESYNC_INTERVAL_S (24UL * 60UL * 60UL)
+#endif
+
 static const unsigned long AP_OFFLINE_WINDOW_MS  = 15UL * 60UL * 1000UL;
 static const unsigned long AP_SETUP_CONFIRM_WINDOW_MS = 5UL * 1000UL;
 static const unsigned long BUTTON_DEBOUNCE_MS    = 35UL;
@@ -70,6 +74,10 @@ static const unsigned long BUTTON_REPEAT_MS      = 300UL;
 static const unsigned long EDIT_FLASH_MS         = 450UL;
 static const unsigned long RESET_HINT_MS         = 5000UL;
 static const unsigned long RESET_HOLD_MS         = 10000UL;
+static const unsigned long NTP_RETRY_MIN_MS      = 5UL * 60UL * 1000UL;
+static const unsigned long NTP_RETRY_MAX_MS      = 60UL * 60UL * 1000UL;
+static const time_t        NTP_MIN_VALID_EPOCH   = 1735689600;  // 2025-01-01T00:00:00Z
+static const uint32_t      NTP_DAILY_RESYNC_S    = (uint32_t)NTP_RESYNC_INTERVAL_S;
 
 enum class EditField : uint8_t {
     NONE = 0,
@@ -103,6 +111,11 @@ static unsigned long both_held_since_ms  = 0;
 static bool          reset_hint_active   = false;
 static bool          reset_done          = false;
 static bool          combo_in_progress   = false;
+static bool          ntp_scheduler_initialized  = false;
+static time_t        ntp_last_valid_epoch       = 0;
+static time_t        ntp_last_daily_request     = 0;
+static unsigned long ntp_last_attempt_ms        = 0;
+static unsigned long ntp_retry_ms               = NTP_RETRY_MIN_MS;
 
 static void setClockFromTm(const tm &src) {
     tm copy = src;
@@ -128,6 +141,71 @@ static void setDefaultClockTime() {
 static void loadCurrentTime(tm &dst) {
     time_t now = time(nullptr);
     localtime_r(&now, &dst);
+}
+
+static void requestNtpResync(const __FlashStringHelper *reason) {
+    if (!connected || !start_NtpClient) return;
+
+    configTzTime(tz_posix, ntp_addr);
+    ntp_last_attempt_ms = millis();
+
+    Serial.print(F("NTP resync requested: "));
+    Serial.println(reason);
+}
+
+static void initNtpSchedulerIfNeeded() {
+    if (ntp_scheduler_initialized || !connected || !start_NtpClient) return;
+
+    ntp_scheduler_initialized = true;
+    ntp_retry_ms             = NTP_RETRY_MIN_MS;
+    ntp_last_attempt_ms      = millis();
+
+    time_t now_epoch = time(nullptr);
+    if (now_epoch >= NTP_MIN_VALID_EPOCH) {
+        ntp_last_valid_epoch   = now_epoch;
+        ntp_last_daily_request = now_epoch;
+        Serial.println(F("NTP scheduler initialized with valid time"));
+    } else {
+        ntp_last_valid_epoch   = 0;
+        ntp_last_daily_request = 0;
+        Serial.println(F("NTP scheduler initialized; waiting for first sync"));
+    }
+}
+
+static void handleNtpScheduler() {
+    if (!connected || !start_NtpClient) {
+        ntp_scheduler_initialized = false;
+        ntp_last_valid_epoch      = 0;
+        ntp_last_daily_request    = 0;
+        ntp_last_attempt_ms       = 0;
+        ntp_retry_ms              = NTP_RETRY_MIN_MS;
+        return;
+    }
+
+    initNtpSchedulerIfNeeded();
+
+    time_t now_epoch = time(nullptr);
+    if (now_epoch >= NTP_MIN_VALID_EPOCH) {
+        if (ntp_last_valid_epoch == 0) {
+            Serial.println(F("NTP valid time acquired"));
+        }
+        ntp_last_valid_epoch = now_epoch;
+        ntp_retry_ms         = NTP_RETRY_MIN_MS;
+
+        if (ntp_last_daily_request == 0 ||
+            (uint32_t)(now_epoch - ntp_last_daily_request) >= NTP_DAILY_RESYNC_S) {
+            requestNtpResync(F("daily"));
+            ntp_last_daily_request = now_epoch;
+        }
+        return;
+    }
+
+    if (ntp_last_attempt_ms == 0 || (millis() - ntp_last_attempt_ms) >= ntp_retry_ms) {
+        requestNtpResync(F("retry"));
+        ntp_retry_ms = (ntp_retry_ms >= (NTP_RETRY_MAX_MS / 2UL))
+            ? NTP_RETRY_MAX_MS
+            : (ntp_retry_ms * 2UL);
+    }
 }
 
 static void showResetConfirmFeedback() {
@@ -384,6 +462,7 @@ void loop() {
 
     // ── Clock display ──────────────────────────────────────────────────────
     loadCurrentTime(timeinfo);
+    handleNtpScheduler();
 
     if (myTimer(1000)) {
         // Auto-brightness: adjust at transition hours
