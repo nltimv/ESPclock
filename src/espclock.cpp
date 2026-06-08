@@ -74,6 +74,7 @@ static const unsigned long BUTTON_REPEAT_MS      = 300UL;
 static const unsigned long EDIT_FLASH_MS         = 450UL;
 static const unsigned long RESET_HINT_MS         = 5000UL;
 static const unsigned long RESET_HOLD_MS         = 10000UL;
+static const unsigned long WIFI_RETRY_INTERVAL_MS = 60UL * 1000UL;
 static const unsigned long NTP_RETRY_MIN_MS      = 5UL * 60UL * 1000UL;
 static const unsigned long NTP_RETRY_MAX_MS      = 60UL * 60UL * 1000UL;
 static const time_t        NTP_MIN_VALID_EPOCH   = 1735689600;  // 2025-01-01T00:00:00Z
@@ -116,6 +117,7 @@ static time_t        ntp_last_valid_epoch       = 0;
 static time_t        ntp_last_daily_request     = 0;
 static unsigned long ntp_last_attempt_ms        = 0;
 static unsigned long ntp_retry_ms               = NTP_RETRY_MIN_MS;
+static unsigned long wifi_last_retry_ms         = 0;
 
 static void setClockFromTm(const tm &src) {
     tm copy = src;
@@ -412,6 +414,11 @@ void setup() {
     // Attempt to restore a previously saved configuration
     checkConfig();
 
+    // If restore failed with saved credentials, defer retries to loop() cadence.
+    if (!connected && creds_available) {
+        wifi_last_retry_ms = millis();
+    }
+
     // Offline mode keeps AP available temporarily after boot.
     WiFi.mode(connected ? WIFI_STA : WIFI_AP_STA);
     WiFi.setAutoReconnect(true);
@@ -489,43 +496,50 @@ void loop() {
     }
 
     // ── WiFi connection ────────────────────────────────────────────────────
+    wl_status_t wifi_status = WiFi.status();
+    if (connected && wifi_status != WL_CONNECTED) {
+        connected          = false;
+        attempts           = 0;
+        wifi_last_retry_ms = millis();
+        Serial.println(F("WiFi connection lost; retrying every minute"));
+    }
+
     if (!connected && creds_available) {
         displayAnim();
-        WiFi.begin(ssid, password);
 
-        while (true) {
-            displayAnim();
+        if (wifi_last_retry_ms == 0 || (millis() - wifi_last_retry_ms) >= WIFI_RETRY_INTERVAL_MS) {
+            wifi_last_retry_ms = millis();
+            ++attempts;
+            displayShowAttempt(attempts);
+            Serial.print(F("WiFi reconnect attempt #"));
+            Serial.println(attempts);
+            WiFi.begin(ssid, password);
+        }
 
-            if (WiFi.status() != WL_CONNECTED && creds_available) {
-                delay(200);
-            } else if (WiFi.status() == WL_CONNECTED) {
-                connected = true;
-                initMDNS();
+        if (WiFi.status() == WL_CONNECTED) {
+            bool was_setup_mode = setup_mode;
+            connected          = true;
+            setup_mode         = false;
+            attempts           = 0;
+            wifi_last_retry_ms = 0;
+            initMDNS();
 
-                // First-time setup: auto-save credentials and defaults;
-                // NTP and AP shutdown are deferred to /setup_timezone.
-                if (setup_mode) {
-                    JsonDocument config;
-                    config[F("ssid")]    = ssid;
-                    config[F("pw")]      = password;
-                    config[F("ntp_ad")]  = ntp_addr;
-                    config[F("tz")]      = tz_iana;
-                    config[F("br_auto")] = br_auto;
-                    config[F("br")]      = brightness;
-                    config[F("blink")]   = blink;
-                    config[F("twelve")]  = twelve;
-                    config.shrinkToFit();
-                    File fc = LittleFS.open("/config.json", "w+");
-                    serializeJsonPretty(config, fc);
-                    fc.close();
-                }
-                break;
-            } else if (attempts == 4) {
-                attempts        = 0;
-                creds_available = false;
-                Serial.println("RESET Attempts from LOOP");
-                Serial.println(password);
-                break;
+            // First-time setup: auto-save credentials and defaults;
+            // NTP and AP shutdown are deferred to /setup_timezone.
+            if (was_setup_mode && !LittleFS.exists("/config.json")) {
+                JsonDocument config;
+                config[F("ssid")]    = ssid;
+                config[F("pw")]      = password;
+                config[F("ntp_ad")]  = ntp_addr;
+                config[F("tz")]      = tz_iana;
+                config[F("br_auto")] = br_auto;
+                config[F("br")]      = brightness;
+                config[F("blink")]   = blink;
+                config[F("twelve")]  = twelve;
+                config.shrinkToFit();
+                File fc = LittleFS.open("/config.json", "w+");
+                serializeJsonPretty(config, fc);
+                fc.close();
             }
         }
     }

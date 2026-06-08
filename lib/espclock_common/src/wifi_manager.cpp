@@ -159,14 +159,14 @@ void checkConfig() {
 
     while (WiFi.status() != WL_CONNECTED) {
         delay(100);
-        displayShowTrying();
+        displayShowAttempt(attempts == 0 ? 1 : attempts);
 
         if (myTimer(3000)) {
             ++attempts;
             displayShowAttempt(attempts);
         } else if (attempts == 4) {
-            attempts        = 0;
-            creds_available = false;
+            attempts = 0;
+            Serial.println(F("WiFi restore failed at boot; will retry from loop() every minute"));
             break;
         }
     }

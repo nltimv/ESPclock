@@ -10,6 +10,11 @@ The following changes have been made in this fork by
 
 ## 2026-06-08
 
+### Wi-Fi reconnect behavior (`src/espclock.cpp`, `lib/espclock_common/src/wifi_manager.cpp`, `lib/espclock_common/src/display.cpp`)
+- Changed Wi-Fi retry indicator to remove `trY` text and show progressive dashes per attempt (`-`, `--`, `---`, `----`).
+- Added non-blocking reconnect scheduling at a fixed 1-minute cadence when saved Wi-Fi credentials fail at boot.
+- Added automatic reconnect scheduling at the same 1-minute cadence after an already-connected device loses Wi-Fi.
+
 ### Online time sync reliability (`src/espclock.cpp`)
 - Added an online-mode NTP scheduler that re-requests NTP synchronization at least once every 24 hours while connected.
 - Added bounded retry backoff (5 minutes up to 60 minutes) when the device has not yet acquired valid NTP time.

@@ -32,8 +32,8 @@ void          myTimerReset(); // reset the shared internal timer counter to now
 void displayInit();                    // initialise hardware, set max brightness
 void displayClear();                   // blank all segments
 void displayShowError(uint8_t code);   // show "Err <code>" on the display
-void displayShowTrying();              // show "trY" while connecting to WiFi
-void displayShowAttempt(uint8_t n);    // show attempt-counter digit n
+void displayShowTrying();              // legacy alias for first retry marker ('-')
+void displayShowAttempt(uint8_t n);    // show n retry dashes (1='-', 2='--', 3='---', 4='----')
 void displaySetBrightness(uint8_t br); // apply a new brightness level
 void displayShowTime(int hour, int minute, bool colonOn, bool twelveHr); // render clock face
 // Like displayShowTime, but showHour/showMinute control which field is visible.

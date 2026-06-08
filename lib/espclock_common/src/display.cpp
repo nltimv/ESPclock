@@ -54,12 +54,6 @@ void myTimerReset() {
 TM1637Display mydisplay(DISPLAY_CLK, DISPLAY_DIO);
 
 // ── Fixed segment patterns ─────────────────────────────────────────────────
-static const uint8_t SEG_try[] = {
-    SEG_D | SEG_E | SEG_F | SEG_G,               // t
-    SEG_E | SEG_G,                                // r
-    SEG_B | SEG_C | SEG_D | SEG_F | SEG_G        // Y
-};
-
 static const uint8_t SEG_Err[] = {
     SEG_A | SEG_D | SEG_E | SEG_F | SEG_G,       // E
     SEG_E | SEG_G,                                // r
@@ -95,11 +89,16 @@ void displayShowError(uint8_t code) {
 }
 
 void displayShowTrying() {
-    mydisplay.setSegments(SEG_try, 3, 0);
+    displayShowAttempt(1);
 }
 
 void displayShowAttempt(uint8_t n) {
-    mydisplay.showNumberDec(n, true, 1, 3);
+    uint8_t dash_count = (n == 0) ? 1 : (n > 4 ? 4 : n);
+    uint8_t digits[4] = {0x00, 0x00, 0x00, 0x00};
+    for (uint8_t i = 0; i < dash_count; ++i) {
+        digits[i] = SEG_G;
+    }
+    mydisplay.setSegments(digits, 4, 0);
 }
 
 void displaySetBrightness(uint8_t br) {
@@ -192,11 +191,15 @@ void displayShowError(uint8_t code) {
 }
 
 void displayShowTrying() {
-    display.setDisplayToString("trY", 0, 0);
+    displayShowAttempt(1);
 }
 
 void displayShowAttempt(uint8_t n) {
-    module.setDisplayDigit(n, 3, false);
+    uint8_t dash_count = (n == 0) ? 1 : (n > 4 ? 4 : n);
+    display.clear();
+    for (uint8_t i = 0; i < dash_count; ++i) {
+        module.setSegments(0x40, 3 - i);  // 0x40 = SEG_G (middle bar)
+    }
 }
 
 void displaySetBrightness(uint8_t br) {
